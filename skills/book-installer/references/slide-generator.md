@@ -152,15 +152,15 @@ Follow the project's CLAUDE.md style guide if one exists. For Learning Sciences 
 
 ### Required Cross-Links on the Chapter's index.md
 
-After generating `slides.md`, update the chapter's `index.md` to add a button bar at the very top, right after the `# Chapter Title` line:
+After generating `slides.md`, update the chapter's `index.md` to add a button bar at the very top, right after the `# Chapter Title` line. **Do not include a "Content" button on the chapter page itself — the reader is already on the content, so that button would be redundant.**
 
 ```markdown
 # <Chapter Title>
 
-[Content](./){ .md-button .md-button--primary } [Slides](slides/){ .md-button } [Slides in Viewer](../../sims/slide-viewer/main.html?src=../../chapters/<chapter-slug>/slides/){ .md-button }
+[Slides](slides/){ .md-button } [Slides in Viewer](../../sims/slide-viewer/main.html?src=../../chapters/<chapter-slug>/slides/){ .md-button .md-button--primary }
 ```
 
-This gives readers a three-button bar: stay on Content, jump to the rendered Slides page (useful as a handout), or open the deck in the Slide Viewer.
+From the rendered `slides.md` page, readers already see a **Content** button (added in the deck template above) that links back to the chapter. The two pages cross-link each other; neither page shows a button to itself.
 
 ## Step 6: Update mkdocs.yml Nav for Each Deck
 
