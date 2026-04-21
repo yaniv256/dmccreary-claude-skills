@@ -111,8 +111,15 @@ Every generated deck must follow this shape:
 1. **Navigation button bar** (before any slide content):
 
    ```markdown
-   [Content](./){ .md-button } [Slides in Viewer](../../sims/slide-viewer/main.html?src=../../chapters/<chapter-slug>/slides/){ .md-button .md-button--primary }
+   [Content](../){ .md-button } [Slides in Viewer](../../../sims/slide-viewer/main.html?src=../../chapters/<chapter-slug>/slides/){ .md-button .md-button--primary }
    ```
+
+   **Path-depth note.** MkDocs serves `slides.md` at `/chapters/<chapter-slug>/slides/`, so:
+   - `../` from the rendered slides page lands on the chapter index (`/chapters/<chapter-slug>/`).
+   - `../../../` climbs to the site root, where `sims/slide-viewer/main.html` lives.
+   - The `src=` parameter is resolved by the viewer's own JavaScript relative to `/sims/slide-viewer/`, which is why that portion stays `../../chapters/<chapter-slug>/slides/`.
+
+   Using `./` for the Content link is a common mistake — `./` resolves to the same slides page, not the chapter.
 
 2. **Title slide** — `# Chapter Title`, one-line subtitle, short tagline or the mascot's catchphrase, author/mascot attribution line. Keep it to 4–6 lines of text.
 
@@ -218,6 +225,8 @@ If the viewer shows "Could not load slides from ... HTTP 404": the `src=` query 
 | Only one slide shows; everything is on it | Source `slides.md` has no `---` horizontal rules | Separator must be `---` on its own line, with blank lines above and below |
 | Mascot does not appear | `docs/img/mascot/neutral.png` not installed | Install the mascot via `learning-mascot.md`, or ignore — viewer still works |
 | Deck nav buttons break the title slide | Buttons placed after the first `---` | The button bar must be at the very top of `slides.md`, before any slide separator |
+| "Content" button on `slides.md` stays on the same page | Link uses `./` (current directory = same slides page) | Use `../` to reach the chapter index — `slides.md` renders at `/chapters/<slug>/slides/`, so `../` lands on `/chapters/<slug>/` |
+| "Slides in Viewer" button on `slides.md` 404s | Only two `../` when three are needed | From `/chapters/<slug>/slides/` the site root is three levels up. Use `../../../sims/slide-viewer/main.html?src=...` |
 | Slides in viewer look ugly (raw admonitions, collapsed `<details>`) | Chapter content was copied verbatim instead of distilled | Re-summarize: slides are 3–7 bullets, not full chapter prose |
 
 ## Dependencies
