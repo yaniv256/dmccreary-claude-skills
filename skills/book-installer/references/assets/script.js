@@ -7,6 +7,10 @@ let allEdges = [];
 let groups = {};
 let visibleGroups = new Set();
 
+// Precomputed once at load — never change after that
+let nodesWithDeps = new Set(); // set of node IDs that have outgoing edges
+let groupCounts = {};          // { groupId: count } for legend labels
+
 // Load the learning graph data
 async function loadGraph() {
     try {
@@ -14,11 +18,23 @@ async function loadGraph() {
         const data = await response.json();
 
         allNodes = data.nodes || [];
-        allEdges = data.edges || [];
         groups = data.groups || {};
+
+        // Assign explicit integer IDs to every edge at load time.
+        allEdges = (data.edges || []).map((edge, i) => ({
+            ...edge,
+            id: edge.id !== undefined ? edge.id : i
+        }));
 
         // Initialize all groups as visible
         Object.keys(groups).forEach(g => visibleGroups.add(g));
+
+        // Precompute values that never change after load
+        nodesWithDeps = new Set(allEdges.map(e => e.from));
+        groupCounts = {};
+        allNodes.forEach(n => {
+            groupCounts[n.group] = (groupCounts[n.group] || 0) + 1;
+        });
 
         initializeNetwork();
         buildLegend();
@@ -29,7 +45,7 @@ async function loadGraph() {
     } catch (error) {
         console.error('Error loading learning graph:', error);
         document.getElementById('network').innerHTML =
-            '<p style="color: red; padding: 20px;">Error loading learning graph. Make sure learning-graph.json exists.</p>';
+            '<p style="color: red; padding: 20px;">Error loading learning graph. Make sure learning-graph.json exists at ../../learning-graph/learning-graph.json</p>';
     }
 }
 
@@ -40,7 +56,7 @@ function initializeNetwork() {
     // Create nodes DataSet - colors are handled by the groups option
     const nodes = new vis.DataSet(allNodes);
 
-    // Create edges DataSet
+    // Create edges DataSet — use allEdges which already have explicit IDs
     const edges = new vis.DataSet(allEdges.map(edge => ({
         ...edge,
         arrows: 'to',
@@ -50,7 +66,6 @@ function initializeNetwork() {
     const data = { nodes, edges };
 
     // Build vis-network groups configuration from JSON groups
-    // IMPORTANT: This ensures node colors match the legend colors
     const visGroups = {};
     Object.entries(groups).forEach(([groupId, groupInfo]) => {
         visGroups[groupId] = {
@@ -73,9 +88,7 @@ function initializeNetwork() {
     });
 
     const options = {
-        // Pass groups configuration to vis-network for correct node coloring
         groups: visGroups,
-        // Use physics-based layout (NOT hierarchical - it doesn't work well with DAGs)
         layout: {
             randomSeed: 42,
             improvedLayout: true
@@ -99,7 +112,7 @@ function initializeNetwork() {
         },
         nodes: {
             shape: 'box',
-            margin: 10,
+            margin: 4,
             font: {
                 size: 14,
                 face: 'Arial'
@@ -125,6 +138,12 @@ function initializeNetwork() {
 
     network = new vis.Network(container, data, options);
 
+    // Remove the loading message once the initial layout is computed.
+    network.once('stabilizationIterationsDone', () => {
+        const msg = document.getElementById('loading-message');
+        if (msg) msg.remove();
+    });
+
     // Turn off physics after 5 seconds to stop spinning
     setTimeout(() => {
         network.setOptions({ physics: { enabled: false } });
@@ -140,7 +159,6 @@ function initializeNetwork() {
     // Turn off physics when user releases the node
     network.on('dragEnd', function(params) {
         if (params.nodes.length > 0) {
-            // Brief delay to let physics settle the dragged node
             setTimeout(() => {
                 network.setOptions({ physics: { enabled: false } });
             }, 1000);
@@ -150,23 +168,18 @@ function initializeNetwork() {
     // Handle node selection
     network.on('selectNode', function(params) {
         if (params.nodes.length > 0) {
-            const nodeId = params.nodes[0];
-            const node = allNodes.find(n => n.id === nodeId);
-            if (node) {
-                highlightNode(nodeId);
-            }
+            highlightNode(params.nodes[0]);
         }
     });
 }
 
 // Build the category legend
-// IMPORTANT: Uses classifierName from groups for human-readable labels
 function buildLegend() {
     const legendContainer = document.getElementById('legend');
     legendContainer.innerHTML = '';
 
     Object.entries(groups).forEach(([groupId, groupInfo]) => {
-        const count = allNodes.filter(n => n.group === groupId).length;
+        const count = groupCounts[groupId] || 0;
 
         const item = document.createElement('div');
         item.className = 'legend-item';
@@ -183,7 +196,6 @@ function buildLegend() {
 
         const label = document.createElement('label');
         label.htmlFor = `group-${groupId}`;
-        // Use classifierName for human-readable label, fallback to groupId
         label.textContent = `${groupInfo.classifierName || groupId} (${count})`;
 
         item.appendChild(checkbox);
@@ -212,39 +224,33 @@ function updateVisibility() {
     const nodes = network.body.data.nodes;
     const edges = network.body.data.edges;
 
-    // Update node visibility
-    allNodes.forEach(node => {
-        const isVisible = visibleGroups.has(node.group);
-        nodes.update({
-            id: node.id,
-            hidden: !isVisible
-        });
-    });
+    // Batch update nodes — single DataSet.update() call triggers one redraw
+    nodes.update(allNodes.map(node => ({
+        id: node.id,
+        hidden: !visibleGroups.has(node.group)
+    })));
 
-    // Update edge visibility (hide if either endpoint is hidden)
-    allEdges.forEach(edge => {
-        const isVisible = visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to);
-        edges.update({
-            id: edge.id || `${edge.from}-${edge.to}`,
-            hidden: !isVisible
-        });
-    });
+    // Batch update edges
+    edges.update(allEdges.map(edge => ({
+        id: edge.id,
+        hidden: !(visibleNodeIds.has(edge.from) && visibleNodeIds.has(edge.to))
+    })));
 
-    updateStats();
+    updateStats(visibleNodeIds);
 }
 
 // Update statistics display
-function updateStats() {
-    const visibleNodeIds = new Set(
-        allNodes.filter(n => visibleGroups.has(n.group)).map(n => n.id)
-    );
+function updateStats(visibleNodeIds) {
+    if (!visibleNodeIds) {
+        visibleNodeIds = new Set(
+            allNodes.filter(n => visibleGroups.has(n.group)).map(n => n.id)
+        );
+    }
 
     const visibleEdgeCount = allEdges.filter(
         e => visibleNodeIds.has(e.from) && visibleNodeIds.has(e.to)
     ).length;
 
-    // Count foundational nodes (nodes with no outgoing dependencies)
-    const nodesWithDeps = new Set(allEdges.map(e => e.from));
     const foundationalCount = allNodes.filter(
         n => !nodesWithDeps.has(n.id) && visibleGroups.has(n.group)
     ).length;
@@ -325,26 +331,17 @@ function selectNode(nodeId) {
 // Highlight a node and its connections
 function highlightNode(nodeId) {
     const connectedNodes = network.getConnectedNodes(nodeId);
-    const allConnected = [nodeId, ...connectedNodes];
+    const connectedSet = new Set([nodeId, ...connectedNodes]);
 
-    // Reset all nodes to normal opacity
     const nodes = network.body.data.nodes;
-    allNodes.forEach(node => {
-        const isConnected = allConnected.includes(node.id);
-        nodes.update({
-            id: node.id,
-            opacity: isConnected ? 1 : 0.3
-        });
-    });
+    nodes.update(allNodes.map(node => ({
+        id: node.id,
+        opacity: connectedSet.has(node.id) ? 1 : 0.3
+    })));
 
-    // Reset opacity after a delay
+    // Reset opacity after a delay — batched for performance
     setTimeout(() => {
-        allNodes.forEach(node => {
-            nodes.update({
-                id: node.id,
-                opacity: 1
-            });
-        });
+        nodes.update(allNodes.map(node => ({ id: node.id, opacity: 1 })));
     }, 3000);
 }
 
