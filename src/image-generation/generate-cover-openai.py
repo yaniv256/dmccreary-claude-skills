@@ -399,7 +399,6 @@ def main() -> None:
         if args.open_browser:
             print("\nOpening ChatGPT and pasting prompt...")
             import subprocess
-            import os
             script_dir = os.path.dirname(os.path.abspath(__file__))
             browser_script = os.path.join(script_dir, "open-chatgpt.py")
 
