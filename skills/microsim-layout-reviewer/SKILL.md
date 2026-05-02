@@ -1,68 +1,91 @@
 ---
 name: microsim-layout-reviewer
-description: Review the visual layout of a p5.js MicroSim using Claude Vision — capture a screenshot at the iframe height, inspect it for layout defects (clipped labels, overlapping controls, sliders extending past the canvas, panel content overflow, residual text strokes, low-contrast text, misaligned baselines, draw-order bugs), patch the `.js` file to fix what's wrong, and re-verify by re-capturing. Use this skill whenever the user asks to "review a MicroSim layout", "check a MicroSim for visual bugs", "fix layout issues in a sim", "QA a MicroSim screenshot", or anything similar. Also use it proactively right after generating a new MicroSim to catch layout defects before the user sees them. Trigger on phrases like "look at the screenshot", "the labels look clipped", "fix the layout", "why is that text cut off", or "review the visual" in a MicroSim context. This skill complements `microsim-iframe-tester` (which uses Playwright bounding-box checks for control visibility) by catching the *visual* defects that pixel-precise checks miss.
+description: Review a MicroSim's visual layout using Claude Vision: screenshot at the declared iframe height, walk a checklist (clipped labels, overlapping controls, panel overflow, low contrast, draw-order, library-specific bugs), patch source, re-verify. Library-agnostic — p5.js, Mermaid, Chart.js, vis-network, Leaflet. Use to QA a layout or fix something that "looks off" in a screenshot — also proactively after generating a new MicroSim. Triggers: "review the layout", "labels clipped", "why cut off". Complements microsim-iframe-tester.
 ---
 
 # MicroSim Layout Reviewer
 
 ## Purpose
 
-`microsim-iframe-tester` uses Playwright to verify that every interactive
-control is *positioned* inside the iframe boundary. That catches "the slider
-got cut off" but it does not catch "the row label says `mpletion: false`
-because the axis-offset is too small" or "the title is overlapping the JSON
-panel" or "every text element has an ugly black outline because someone
-forgot a `noStroke()`". Those defects are obvious to a human looking at the
-sim — and obvious to Claude looking at the screenshot — but invisible to
-geometric checks.
+A "MicroSim" is any interactive program embedded in an iframe and built
+to educational-content standards (`docs/sims/<sim-id>/main.html` plus
+metadata, screenshot, index page). The library doesn't matter — p5.js,
+Mermaid, Chart.js, vis-network, Leaflet, or hand-rolled HTML/SVG are all
+valid implementations. What they share is the iframe contract: fixed
+height, no scroll, embedded inside an MkDocs page.
 
-This skill is the visual-review counterpart. It captures the sim at its real
-iframe height, looks at the image with intent, and patches the `.js` file
-where the rendering is wrong.
+`microsim-iframe-tester` uses Playwright to verify every interactive
+control sits *inside* the iframe boundary. That catches "the slider got
+cut off at the bottom" but it does not catch "the row label says
+`mpletion: false` because the axis-offset is too small", "the title
+overlaps the JSON panel", "every text element has an ugly black outline
+because someone forgot a `noStroke()`", or "the bar chart's tolerance
+band rises into the chart title". Those defects are obvious to a human
+looking at the sim — and obvious to **Claude Vision** looking at the
+screenshot — but invisible to geometric checks.
+
+This skill is the visual-review counterpart. It captures the sim at its
+real iframe height, looks at the image with intent, and patches the
+source where the rendering is wrong.
 
 ## When to use
 
 - Right after generating a new MicroSim (proactive QA)
 - When the user pastes a screenshot and says "this looks off"
-- When a sim's iframe height is correct but the layout still looks broken
+- When iframe height is correct but the layout still looks broken
 - When a sim worked at one width and now looks wrong at another
 
-If the issue is "controls clipped at the bottom of the iframe" only, prefer
-`microsim-iframe-tester` first — it gives a precise suggested height. Use
-this skill when the issue is *inside* the canvas, not at its edges.
+If the issue is "controls clipped at the bottom of the iframe" only,
+prefer `microsim-iframe-tester` first — it gives a precise suggested
+height. Use this skill when the issue is *inside* the canvas, not at
+its edges.
 
 ## Workflow
 
 ### 1. Resolve the target sim
 
-The user will give you a sim directory, a sim-id, or just say "the one I
-just made". Resolve to an absolute path. The path must contain `main.html`,
-`index.md`, and a `*.js` file. If multiple `.js` files exist, the one
-referenced from `main.html` is the canvas script.
+The user will give you a sim directory, a sim-id, or just say "the one
+I just made". Resolve to an absolute path. The path must contain
+`main.html` and `index.md`. Most sims also have one or more source
+files alongside (`*.js`, `*.css`, sometimes `*.mmd` or `data.json`),
+but Mermaid and pure-HTML sims may have all the layout logic inside
+`main.html` itself.
 
-### 2. Read the iframe height from `index.md`
+### 2. Identify the source file you'll patch if needed
 
-Find the line `<iframe src="main.html" height="NNNpx" ...>`. Extract `NNN`.
-This is the height the sim will actually render at in the textbook, so this
-is what you must screenshot at — not the tool's default height. If
-`index.md` has no iframe (rare, but happens for new scaffolds), fall back to
-the `// CANVAS_HEIGHT:` comment in the `.js` file plus 2.
+Open `main.html` and note:
 
-### 3. Capture a screenshot
+- Which `<script src="...">` tags it loads from local files (those
+  `.js` files are likely candidates for layout fixes).
+- Whether the rendering library is configured inline (Mermaid's
+  `mermaid.initialize({...})`, Chart.js options object, etc.) — in
+  which case the patch may live in `main.html` itself.
+- Whether a `data.json` or `*.mmd` file holds the structural content
+  (some defects are in data, not code).
+
+You don't need to read the source yet — just know where to look.
+
+### 3. Read the iframe height from `index.md`
+
+Find `<iframe src="main.html" height="NNNpx" ...>`. Extract `NNN`. This
+is the height the sim renders at in the textbook, so this is what you
+must screenshot at — not the tool's default. If `index.md` has no
+iframe (rare, on new scaffolds), fall back to the `// CANVAS_HEIGHT:`
+comment in the JS source plus 2.
+
+### 4. Capture a screenshot
 
 ```bash
 bk-capture-screenshot <sim-dir> 3 <iframe-height>
 ```
 
-Output: `<sim-dir>/<sim-id>.png`. The script renders headless Chrome at
-800px wide × the requested height, waits the delay seconds for JS to
-settle, and writes a PNG.
+Renders headless Chrome at 800 px wide × the requested height, waits
+the delay seconds for JS to settle, writes `<sim-dir>/<sim-id>.png`.
 
-If `bk-capture-screenshot` is not on PATH (`which bk-capture-screenshot`
-returns nothing), tell the user — don't try to write your own headless
-Chrome wrapper.
+If `bk-capture-screenshot` is not on PATH, tell the user — don't write
+your own headless Chrome wrapper.
 
-### 4. Read the screenshot
+### 5. Read the screenshot
 
 Use the `Read` tool on the PNG. The image is passed into context as
 visual content for **Claude Vision** to analyze directly — no OCR, no
@@ -72,73 +95,89 @@ clipping at edges. Capability tracks the model version, so when this
 skill is invoked under a newer model it should produce sharper review
 output without changes here. Note the active model version (e.g.
 "Claude Vision (Opus 4.7)") when you write the review summary in
-step 9 — the version anchors the judgment for anyone re-reading later.
+step 10.
 
-### 5. Apply the visual checklist
+### 6. Apply the visual checklist
 
-Read `references/visual-checklist.md` and walk through every item
-against the screenshot you just loaded. Don't skim — go item by item.
-Claude Vision is **not deterministic**: what gets flagged depends on
-what you're actively looking for. The checklist is what disciplines
-review into reliable output, by forcing explicit inspection of every
-known failure mode rather than a vague "does this look OK?".
+Read `references/visual-checklist.md` and walk every item against the
+screenshot you just loaded. Don't skim — go item by item. Claude
+Vision is **not deterministic**: what gets flagged depends on what
+you're actively looking for. The checklist disciplines review into
+reliable output by forcing explicit inspection of every known failure
+mode rather than a vague "does this look OK?".
 
-For each item in the checklist, decide: **PASS**, **FAIL**, or **N/A**
-(e.g., "no JSON panel exists in this sim"). Quote the specific evidence
-from the image — *what you see* — for any FAIL.
+For each item, decide: **PASS**, **FAIL**, or **N/A** (e.g., "no JSON
+panel in this sim", "no Mermaid in this sim"). Quote the specific
+evidence — *what you see* — for any FAIL.
 
-### 6. Diagnose and patch
+The checklist's library-specific section (5.x) covers Mermaid,
+vis-network, Chart.js, and Leaflet patterns. If the sim uses a library
+not yet covered, fall back to the general items (1–4) and note the
+gap.
 
-For each FAIL, consult `references/common-fixes.md`. The table maps each
-visual symptom to the most likely root cause(s) in the `.js` file and the
-specific edit that fixes it. Make the smallest change that resolves the
-defect.
+### 7. Diagnose and patch
 
-Edit only the `.js` file unless the defect is iframe-height-related (in
-which case `index.md` and possibly the chapter file need updating, and
-you should hand off to `fix-iframe-heights.py`).
+For each FAIL, consult `references/common-fixes.md`. It maps each
+visual symptom to the likely root cause(s) and the specific edit that
+fixes it. Some fixes are library-agnostic (draw order, panel overflow,
+text contrast), others are library-specific and labeled as such (p5.js
+stroke-state, Mermaid subgraph-title collisions, vis-network edge-label
+y-offset).
 
-### 7. Re-capture and verify
+Make the smallest change that resolves the defect. Edit the source
+file you identified in step 2 — that's typically a `.js` for p5.js /
+Chart.js / vis-network / Leaflet sims, or `main.html` for Mermaid and
+inline-config sims, or a `data.json` / `*.mmd` for content-driven
+defects.
 
-After every fix-patch round, re-run the screenshot and re-read it. Walk
-the same checklist again. The fixes should turn FAILs into PASSes without
-introducing new FAILs.
+If the defect is iframe-height-related (content extends past the
+iframe edge), do *not* fix it here — hand off to
+`microsim-iframe-tester` and `fix-iframe-heights.py`.
 
-If a fix doesn't resolve the issue, *do not* keep widening it (e.g.,
-ratcheting `axisOffset` from 60 → 110 → 160 → 200). Instead, stop and
-think: the parameter you're tuning may not be the right lever. Re-read
-the .js file around the suspect area and look for an unrelated cause.
+### 8. Re-capture and verify
 
-### 8. Stop after 3 review-patch cycles
+Re-run the screenshot, re-read it, walk the same checklist. The fixes
+should turn FAILs into PASSes without introducing new FAILs.
 
-If the third re-capture still shows issues, stop and report what's left.
-Continued tweaking past three cycles usually means the design has a
-deeper issue that needs human judgement — better to surface that than to
-quietly produce something subtly worse.
+If a fix doesn't resolve the issue, *do not* keep widening the same
+parameter (e.g., ratcheting `axisOffset` from 60 → 110 → 160 → 200).
+Stop and think: the lever you're pulling may not be the right one.
+Re-read the source around the suspect area and look for an unrelated
+cause.
 
-### 9. Report
+### 9. Stop after 3 review-patch cycles
 
-Tell the user, for each sim reviewed:
+If the third re-capture still shows issues, stop and report what's
+left. More tweaking usually means the design has a deeper issue that
+needs human judgement — better to surface that than to quietly produce
+something subtly worse.
 
+### 10. Report
+
+For each sim reviewed:
+
+- Library / source file(s) touched
 - Initial defects found (one line per FAIL with quoted evidence)
-- Edits applied (file:line, what changed)
+- Edits applied (`file:line`, what changed)
 - Final state (clean / partial / unfixed) with a one-sentence reason
+- Active **Claude Vision** model version (anchors the judgment for
+  future re-reads)
 
 ## What this skill does *not* do
 
-- It does not replace `microsim-iframe-tester`. If the iframe is the wrong
-  height, run that first.
-- It does not redesign sims. If the sim's overall layout is poorly
-  conceived (e.g., 11 controls crammed into one row), this skill will
-  surface the symptoms but won't propose a redesign — call that out and
-  stop.
-- It does not modify approved sims. If `index.md` frontmatter has
-  `status: approved`, skip the sim and tell the user. Approved sims are
-  locked from incidental edits.
+- Does not replace `microsim-iframe-tester`. If the iframe is the
+  wrong height, run that first.
+- Does not redesign sims. If the layout is fundamentally poorly
+  conceived (e.g., 12 controls crammed into one row), surface the
+  symptoms and stop.
+- Does not modify approved sims. If `index.md` frontmatter has
+  `status: approved`, skip the sim and tell the user — approved sims
+  are locked from incidental edits.
 
 ## Reference files
 
 - `references/visual-checklist.md` — every item to inspect, with what
-  PASS/FAIL look like.
-- `references/common-fixes.md` — symptom → root-cause-in-.js → edit.
+  PASS/FAIL look like, and a library-specific section.
+- `references/common-fixes.md` — symptom → root-cause → edit, with
+  library-specific fixes labeled (p5.js, Mermaid, vis-network, etc.).
   Read this when diagnosing a FAIL, not before.

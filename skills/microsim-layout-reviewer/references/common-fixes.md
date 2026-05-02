@@ -1,9 +1,25 @@
-# Common Fixes — Symptom → .js Patch
+# Common Fixes — Symptom → Source Patch
 
-Each entry maps a checklist FAIL to its likely cause in the `.js` file
-and the smallest edit that resolves it. The "why" line explains the
-underlying bug pattern so you can recognize it next time, even if it
-manifests slightly differently.
+Each entry maps a checklist FAIL to its likely cause and the smallest
+edit that resolves it. The "why" line explains the underlying bug
+pattern so you can recognize it next time, even if it manifests
+slightly differently.
+
+**Where the patch lives** depends on the library:
+
+| Library | Patch file | Notes |
+|---------|------------|-------|
+| p5.js | `<sim-id>.js` | Canvas drawing in `draw()` / `setup()` |
+| Chart.js | `<sim-id>.js` | Chart options object |
+| vis-network / vis-timeline | `<sim-id>.js` | Network options / data |
+| Leaflet | `<sim-id>.js` | Map config + layers |
+| Mermaid | `main.html` | Inline `mermaid.initialize({...})` and graph |
+| Hand-rolled HTML/SVG | `main.html` and/or CSS | DOM + styles |
+| Content-driven | `data.json` or `*.mmd` | Data-shape defects |
+
+Items below are **library-agnostic** unless their heading is tagged
+with a library name (e.g. *(p5.js)*). The library-specific patterns
+live in their own sections at the bottom.
 
 ---
 
@@ -47,7 +63,7 @@ midpoint is no longer "above your content".
 
 ---
 
-## Text has an ugly black outline (residual stroke)
+## Text has an ugly black outline (residual stroke) *(p5.js)*
 
 **Likely cause:** a `stroke()` call (often inside a `rect()` or `line()`
 draw) is still active when `text()` is called. p5 strokes glyphs by
@@ -67,7 +83,7 @@ reason — it's a stateful API where the easy default is wrong.
 
 ---
 
-## Slider extends past the right edge of the canvas
+## Slider extends past the right edge of the canvas *(p5.js)*
 
 **Likely cause:** the slider's `size()` was set in `setup()` only and
 not updated in `windowResized()`. When the canvas grew or shrunk, the
@@ -85,7 +101,7 @@ explicitly resizing every slider whenever the canvas resizes.
 
 ---
 
-## Slider label overlaps slider track
+## Slider label overlaps slider track *(p5.js)*
 
 **Likely cause:** `sliderLeftMargin` is too small for the label width,
 so the slider starts before the label ends. Or the label is being
@@ -104,10 +120,12 @@ all rows, not just its own row's label. The constant
 
 ---
 
-## Buttons overlap each other
+## Buttons overlap each other *(p5.js — manual positioning)*
 
 **Likely cause:** two `button.position(x, y)` calls have the same `x`,
-or `x` values that are closer than the button widths.
+or `x` values that are closer than the button widths. (For HTML-based
+sims, this manifests differently — usually as missing `gap` in flexbox
+or insufficient column count in a grid.)
 
 **Find:** grep for `.position(` in `setup()`. Track the `x` values for
 each button and compute the gap.
@@ -181,7 +199,7 @@ panel — students at narrow viewports see it.
 
 ---
 
-## Drawing area background is white instead of aliceblue
+## Drawing area background is white instead of aliceblue *(p5.js)*
 
 **Likely cause:** the `fill('aliceblue')` call before the drawing-area
 `rect(...)` was omitted, or the wrong fill is set when the rect is
@@ -246,9 +264,13 @@ finished. Increase the delay (3 → 5 seconds).
 **Likely cause (b):** a JS error in the sim. Run the sim in a real
 browser and check the DevTools console.
 
-**Likely cause (c):** the canvas was created with zero width because
-`updateCanvasSize()` ran before the container existed. Confirm
+**Likely cause (c, p5.js):** the canvas was created with zero width
+because `updateCanvasSize()` ran before the container existed. Confirm
 `updateCanvasSize()` is the first line of `setup()`.
+
+**Likely cause (d, library load):** the CDN script in `main.html`
+points at a version that no longer exists, or the page is offline.
+Check the browser console; pin the library version and re-test.
 
 ---
 
@@ -256,13 +278,22 @@ browser and check the DevTools console.
 
 If a defect doesn't match any pattern here, do this:
 
-1. Read the relevant section of the `.js` file (the function that
-   draws the affected region).
+1. Read the relevant section of the source file (the function or
+   block that produces the affected region — for p5.js that's a
+   `draw()` segment, for Mermaid it's the graph definition or
+   `mermaid.initialize` config, for Chart.js it's the options object,
+   etc.).
 2. Look for hardcoded constants that ought to be derived (a magic
-   `60` that should be `textWidth(label) + 8`).
-3. Look for missing state resets (`noStroke()`, `textAlign()`,
-   `textSize()` that should reset between sections).
-4. Look for draw-order errors (background drawn after content).
+   `60` that should be `textWidth(label) + 8`; a fixed pixel offset
+   that should be relative to a parent's measured size).
+3. Look for missing state resets — for p5.js that's `noStroke()`,
+   `textAlign()`, `textSize()` between sections; for canvas-based
+   charting libraries it's `ctx.save()` / `ctx.restore()` around
+   custom plugins.
+4. Look for draw-order errors (background drawn after content; CSS
+   `z-index` inverted; SVG element added late so it stacks on top of
+   labels).
 
-Then add a new entry to this file so the next reviewer doesn't have
-to rediscover it.
+Then add a new entry to this file — labeled with the library if it's
+library-specific — so the next reviewer doesn't have to rediscover
+it.

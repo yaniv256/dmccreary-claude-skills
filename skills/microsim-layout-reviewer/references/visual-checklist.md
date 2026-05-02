@@ -161,7 +161,12 @@ colors appear, the design is noisy.
 
 ---
 
-## 5. Sim-specific elements
+## 5. Library-specific elements
+
+These items only apply when the sim uses the named library. For sims
+using a library not listed here, fall back to sections 1–4 and note
+the gap in the report so future runs can extend coverage.
+
 
 ### 5.1 Mermaid diagrams: subgraph titles not collided with arrows
 For TD-layout Mermaid diagrams, an arrow entering the top of a lower
