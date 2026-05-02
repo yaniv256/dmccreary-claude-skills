@@ -10,7 +10,7 @@ description: 'Review a MicroSim''s visual layout using Claude Vision — screens
 A "MicroSim" is any interactive program embedded in an iframe and built
 to educational-content standards (`docs/sims/<sim-id>/main.html` plus
 metadata, screenshot, index page). The library doesn't matter — p5.js,
-Mermaid, Chart.js, vis-network, Leaflet, or hand-rolled HTML/SVG are all
+Mermaid, Chart.js, vis-network, vis-timeline, Leaflet, or hand-rolled HTML/SVG are all
 valid implementations. What they share is the iframe contract: fixed
 height, no scroll, embedded inside an MkDocs page.
 
