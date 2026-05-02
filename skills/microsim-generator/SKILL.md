@@ -654,6 +654,58 @@ Creates <microsim-name>.png in the MicroSim directory that is typically around 5
 
 ---
 
+## Step 9: Visual Layout Review (MANDATORY)
+
+**MANDATORY after capturing the screenshot.** This is the visual QA
+counterpart to `microsim-iframe-tester` (which uses Playwright
+bounding-box checks). Layout review catches the defects that geometry
+checks miss: clipped row labels, controls overlapping, text rendered
+with residual strokes, panel content overflow, low-contrast labels,
+draw-order bugs, and library-specific rendering issues.
+
+The screenshot from Step 8 is the input — do not re-capture.
+
+Invoke the **`microsim-layout-reviewer`** skill on each newly-generated
+sim:
+
+```
+For each sim that was generated in this batch:
+  1. Read references/visual-checklist.md from microsim-layout-reviewer
+  2. Read the sim's screenshot PNG (Read tool — Claude Vision sees it)
+  3. Walk every checklist item; mark PASS / FAIL / N/A with quoted
+     evidence for any FAIL
+  4. For each FAIL, consult references/common-fixes.md and apply the
+     smallest patch that resolves it (typically a small edit to the
+     .js for p5.js / Chart.js / vis-network / Leaflet sims, or to
+     main.html for Mermaid sims)
+  5. Re-capture, re-read, re-walk the checklist
+  6. Stop after 3 review-patch cycles even if issues remain — surface
+     residue rather than over-tweak
+```
+
+The skill itself documents its full workflow at
+`~/.claude/skills/microsim-layout-reviewer/SKILL.md`. From this
+generator's standpoint, the contract is: "after Step 8, every sim
+must have passed layout review or had its remaining defects
+explicitly reported."
+
+**What layout review does NOT do:**
+
+- Does not fix iframe-height clipping (content extending past the
+  iframe edge) — that's `fix-iframe-heights.py` and
+  `microsim-iframe-tester` from Step 6B / 6C.
+- Does not modify approved sims (frontmatter `status: approved`).
+  In this generator's flow that's irrelevant — newly-generated sims
+  are not yet approved — but the rule still applies.
+
+**Why this is mandatory in the generator:** the value of catching
+layout defects at generation time, before the user sees the sim, is
+much higher than catching them later. Visual review at the end of
+Step 8 means "looks right when embedded" is part of the definition
+of done for every new MicroSim, not a separate manual QA pass.
+
+---
+
 ## Workflow Summary
 
 ### Batch (Chapter-Level) Generation
@@ -680,6 +732,9 @@ Step 6C: test-iframe-heights.py → Playwright verifies controls visible in ifra
 Step 7: update-mkdocs-nav.py → regenerates nav
   ↓
 Step 8: bk-capture-screenshot /path/to/microsim 3 {height} → creates screen image
+  ↓
+Step 9: microsim-layout-reviewer → Claude Vision walks the checklist,
+        diagnoses + patches FAILs, re-captures to verify (max 3 cycles)
 ```
 
 ### Single Sim Generation
@@ -702,6 +757,9 @@ Step 6C: test-iframe-heights.py --sim <name> → Playwright verifies controls vi
 Step 7:  update-mkdocs-nav.py
   ↓
 Step 8:  bk-capture-screenshot /path/to/microsim 3 {height} → creates screen image
+  ↓
+Step 9:  microsim-layout-reviewer → Claude Vision walks the checklist,
+         diagnoses + patches FAILs, re-captures to verify (max 3 cycles)
 ```
 
 ### Resuming After Context Window Fills
