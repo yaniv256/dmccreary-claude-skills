@@ -1016,13 +1016,39 @@ plugins:
       draggable: true
       auto_caption: false
       caption_position: bottom
+      skip_classes:
+        - mascot-admonition-img
 ```
 
-All images will now be zoomable on click. To exclude specific images:
+All images will now be zoomable on click. The `skip_classes` list tells the
+plugin's Python build step to never wrap those images in a lightbox anchor —
+they will not appear in the prev/next gallery sequence.
+
+**If the project uses a learning mascot**, `mascot-admonition-img` must be in
+`skip_classes`. Without it, every mascot pose is indexed in the lightbox
+gallery and appears when the user clicks the prev/next arrows on any chapter
+image. CSS `pointer-events: none` on the `<img>` tag does **not** fix this —
+the gallery index is built at MkDocs build time by the plugin's
+`on_page_content` hook, not at click time. Only `skip_classes` (or the
+per-image `off-glb` class) removes an image from the index.
+
+**How the plugin decides what to skip** (from the plugin source):
+
+```python
+skip_classes = ["emojione", "twemoji", "gemoji", "off-glb"] + self.config["skip_classes"]
+```
+
+Any image whose `class` attribute overlaps with this list is skipped entirely.
+
+**To exclude a one-off image** without touching config:
 
 ```markdown
 ![Image](path/to/image.png){ .off-glb }
 ```
+
+**Common mistake — `selector` is not a valid option.** The plugin has no
+`selector` config key; adding one is silently ignored. Use `skip_classes`
+instead.
 
 ---
 

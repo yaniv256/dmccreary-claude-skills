@@ -89,6 +89,10 @@ plugins:
   #     height: auto
   #     zoomable: true
   #     draggable: true
+  #     auto_caption: false
+  #     caption_position: bottom
+  #     skip_classes:
+  #       - mascot-admonition-img   # keep mascot poses out of the lightbox gallery
 
 # Markdown extensions
 markdown_extensions:

@@ -99,8 +99,9 @@ Suggest names that:
 - Relate to the subject (e.g., "Ada" for programming, "Archie" for architecture)
 - Have alliteration with the species (e.g., "Sylvia the Squirrel", "Otto the Owl")
 - Are culturally neutral and inclusive
+- **Are gender-neutral** — always prefer gender-neutral names so all students feel represented by the mascot. Avoid names that strongly imply a gender (e.g., prefer "Sage" over "Sally", "River" over "Robert"). Never use gendered pronouns for the mascot — always refer to it by name or use "they/them".
 
-Provide 3-5 name suggestions based on the species and subject.
+Provide 3-5 name suggestions based on the species and subject, prioritizing gender-neutral options.
 
 **Question 4: What is the character's catchphrase?**
 
@@ -560,7 +561,7 @@ Create or append to `docs/css/mascot.css`:
   /* margin: top right bottom left */
   margin: 0 .5em 0 0;
   object-fit: contain;
-  pointer-events: none;  /* prevent glightbox zoom on mascot icons */
+  pointer-events: none;  /* belt-and-suspenders; real exclusion is via glightbox skip_classes */
 }
 ```
 
