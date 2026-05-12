@@ -58,6 +58,7 @@ Relative to the project root the user is in:
 ├── .gitignore                     # Python, MkDocs, OS, and editor ignores
 ├── {{REPO_NAME}}.code-workspace   # VS Code workspace file
 ├── mkdocs.yml                     # rendered from assets/templates/mkdocs.yml
+├── .gitignore                     # Python / MkDocs / OS / editor ignore patterns
 ├── plugins/
 │   └── social_override.py         # MkDocs hook: per-page og:image / twitter:image override
 └── docs/
@@ -168,21 +169,6 @@ external dependencies.
 
 For `docs/img/license.png`, copy the binary as-is (no substitution).
 
-Copy `plugins/social_override.py` as-is (no substitution needed) into
-`<project-root>/plugins/social_override.py`. The `mkdocs.yml` template
-already includes the matching `hooks:` entry pointing at this file, so MkDocs
-will run it on every page build to allow per-page `image:` frontmatter to
-override the auto-generated `og:image` / `twitter:image` social preview URL.
-
-Copy `.gitignore` as-is into `<project-root>/.gitignore`. It covers Python
-bytecode, the MkDocs `site/` build output, virtual-environment directories,
-OS files (`.DS_Store`, `Thumbs.db`), and common editor artifacts.
-
-Copy `project.code-workspace` into `<project-root>/{{REPO_NAME}}.code-workspace`,
-renaming it so the workspace file matches the project directory name. This
-lets VS Code open the project cleanly with a single double-click. No other
-substitution is needed inside the file.
-
 ### Step 5 — Verify the result builds
 
 After scaffolding, suggest the user run:
@@ -232,7 +218,6 @@ Scaffold complete. Next steps via the book-installer skill:
 
   Project hygiene
    24.  Skill usage tracker             (book-installer 24)
-   26.  .gitignore installer            (book-installer 26)
    29.  Feature checklist (auto-detect) (book-installer 29)
    34.  Kanban project board            (book-installer 34)
    36.  About page (richer)             (book-installer 36)
@@ -362,8 +347,6 @@ init-textbook/
         ├── .gitignore                         # Python, MkDocs, OS, editor ignores
         ├── project.code-workspace             # VS Code workspace (renamed to {{REPO_NAME}}.code-workspace)
         ├── mkdocs.yml                         # the main config template
-        ├── plugins/
-        │   └── social_override.py             # og:image / twitter:image override hook
         └── docs/
             ├── index.md
             ├── about.md
