@@ -12,6 +12,40 @@
 
 // Global variables
 
+// When a node sits near the top of the canvas its tooltip overlaps the diagram
+// title. Observe the tooltip's style attribute and flip it below the node
+// whenever vis-network places it inside the title safe zone (top 60 px).
+// Termination: after one flip the new top is >= SAFE_PX, so the recursive
+// observer fire finds the condition false and does nothing.
+function attachTooltipRepositioner(networkContainer) {
+    const SAFE_PX = 60;
+    const observer = new MutationObserver(function () {
+        const tip = networkContainer.querySelector('.vis-tooltip');
+        if (!tip) return;
+        const top = parseFloat(tip.style.top) || 0;
+        if (top < SAFE_PX) {
+            const h = tip.offsetHeight || 80;
+            tip.style.top = (top + h + 16) + 'px';
+        }
+    });
+    observer.observe(networkContainer, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ['style']
+    });
+}
+
+// Returns a DOM element for vis-network tooltips. Passing a DOM node (not a
+// string) bypasses vis-network's internal white-space override, so the text
+// actually wraps instead of running off the canvas edge.
+function makeTooltip(text) {
+    if (!text) return undefined;
+    const div = document.createElement('div');
+    div.style.cssText = 'max-width:260px;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;line-height:1.5;font-size:13px;padding:2px 0;';
+    div.textContent = text;
+    return div;
+}
+
 let network = null;
 let cldData = null;
 let nodes, edges;
@@ -216,6 +250,7 @@ function initializeNetwork() {
         container.appendChild(overlay);
 
         attachCustomZoom(container);
+        attachTooltipRepositioner(container);
 
         attachResizeObserver(container);
 
@@ -279,7 +314,7 @@ function loadCLD(data) {
             label: wrapText(node.label, 20),
             x: node.position.x,
             y: node.position.y,
-            title: node.description || `${node.label} (${node.type || 'variable'})`,
+            title: makeTooltip(node.description || `${node.label} (${node.type || 'variable'})`),
             originalData: node
         }));
 
@@ -290,7 +325,7 @@ function loadCLD(data) {
                 to: edge.target,
                 label: edge.polarity === 'positive' ? '+' : '-',
                 color: edge.polarity === 'positive' ? '#28a745' : '#dc3545',
-                title: edge.description || `${edge.polarity === 'positive' ? 'Positive (+)' : 'Negative (-)'} relationship from ${edge.source} to ${edge.target}`,
+                title: makeTooltip(edge.description || `${edge.polarity === 'positive' ? 'Positive (+)' : 'Negative (-)'} relationship from ${edge.source} to ${edge.target}`),
                 originalData: edge,
             // Font configuration for edge labels
                 font: {
@@ -319,7 +354,7 @@ function loadCLD(data) {
                 if (loop.position) {
                     visNodes.push({
                         id: 'loop_' + loop.id,
-                        label: loop.type === 'reinforcing' ? 'R' : 'B',
+                        label: loop.id,
                         x: loop.position.x,
                         y: loop.position.y,
                         shape: 'ellipse',
@@ -336,7 +371,7 @@ function loadCLD(data) {
                         margin: {
                             left: Math.round(30 * 0.1)
                         },
-                        title: loop.description || `${loop.type === 'reinforcing' ? 'Reinforcing' : 'Balancing'} Loop: ${loop.label || loop.id}`,
+                        title: makeTooltip(loop.description || `${loop.type === 'reinforcing' ? 'Reinforcing' : 'Balancing'} Loop: ${loop.label || loop.id}`),
                         originalData: loop,
                         isLoop: true
                     });

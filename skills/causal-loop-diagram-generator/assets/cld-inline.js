@@ -81,6 +81,40 @@
         }, { passive: false });
     }
 
+    // When a node sits near the top of the canvas its tooltip overlaps the
+    // diagram title. This observer repositions the tooltip below the node
+    // whenever vis-network places it inside the title safe zone (top 60 px).
+    // Termination: after one flip the new top is >= SAFE_PX, so the recursive
+    // observer fire finds the condition false and does nothing.
+    function attachTooltipRepositioner(networkDiv) {
+        const SAFE_PX = 60;
+        const observer = new MutationObserver(function () {
+            const tip = networkDiv.querySelector('.vis-tooltip');
+            if (!tip) return;
+            const top = parseFloat(tip.style.top) || 0;
+            if (top < SAFE_PX) {
+                const h = tip.offsetHeight || 80;
+                tip.style.top = (top + h + 16) + 'px';
+            }
+        });
+        observer.observe(networkDiv, {
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['style']
+        });
+    }
+
+    // Returns a DOM element for vis-network tooltips. Passing a DOM node (not
+    // a string) bypasses vis-network's internal white-space override, so the
+    // text actually wraps instead of running off the canvas.
+    function makeTooltip(text) {
+        if (!text) return undefined;
+        var div = document.createElement('div');
+        div.style.cssText = 'max-width:260px;white-space:normal;word-wrap:break-word;overflow-wrap:break-word;line-height:1.5;font-size:13px;padding:2px 0;';
+        div.textContent = text;
+        return div;
+    }
+
     function buildVisNodes(data) {
         const out = data.nodes.map(function (n) {
             return {
@@ -88,7 +122,7 @@
                 label: wrapText(n.label, 18),
                 x: n.position.x,
                 y: n.position.y,
-                title: n.description || n.label
+                title: makeTooltip(n.description || n.label)
             };
         });
         if (Array.isArray(data.loops)) {
@@ -96,7 +130,7 @@
                 if (!loop.position) return;
                 out.push({
                     id: 'loop_' + loop.id,
-                    label: loop.type === 'reinforcing' ? 'R' : 'B',
+                    label: loop.id,
                     x: loop.position.x,
                     y: loop.position.y,
                     shape: 'ellipse',
@@ -105,10 +139,10 @@
                         background: loop.type === 'reinforcing' ? '#dc3545' : '#28a745',
                         border: '#000'
                     },
-                    font: { color: 'white', size: 22, face: 'Arial' },
+                    font: { color: 'white', size: 16, face: 'Arial' },
                     widthConstraint: { minimum: 40, maximum: 40 },
                     heightConstraint: { minimum: 40, valign: 'middle' },
-                    title: (loop.label || loop.id) + ': ' + (loop.description || '')
+                    title: makeTooltip((loop.label || loop.id) + ': ' + (loop.description || ''))
                 });
             });
         }
@@ -123,7 +157,7 @@
                 to: e.target,
                 label: e.polarity === 'positive' ? '+' : '−',
                 color: { color: e.polarity === 'positive' ? '#28a745' : '#dc3545' },
-                title: e.description || '',
+                title: makeTooltip(e.description || ''),
                 font: {
                     size: 28,
                     color: e.polarity === 'positive' ? '#1e7e34' : '#a71d2a',
@@ -195,6 +229,7 @@
             }, NETWORK_OPTIONS);
 
             attachCustomZoom(networkDiv, network);
+            attachTooltipRepositioner(networkDiv);
 
             // Title overlay
             const overlay = document.createElement('div');
@@ -223,9 +258,29 @@
         }
     }
 
+    // Inject tooltip CSS once per page so vis-network tooltips wrap instead of
+    // running off the edge of the canvas.
+    let tooltipStyleInjected = false;
+    function injectTooltipStyle() {
+        if (tooltipStyleInjected) return;
+        tooltipStyleInjected = true;
+        const s = document.createElement('style');
+        s.textContent = [
+            '.vis-tooltip {',
+            '  max-width: 280px;',
+            '  white-space: normal;',
+            '  word-wrap: break-word;',
+            '  line-height: 1.5;',
+            '  font-size: 13px;',
+            '}'
+        ].join('\n');
+        document.head.appendChild(s);
+    }
+
     function init() {
         const containers = document.querySelectorAll('.cld-inline[data-src]');
         if (!containers.length) return;
+        injectTooltipStyle();
 
         if (!('IntersectionObserver' in window)) {
             containers.forEach(render);

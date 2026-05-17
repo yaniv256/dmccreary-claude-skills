@@ -156,10 +156,20 @@
             border-left: 4px solid #007bff;
         }
         
+        /* Constrain vis-network tooltips so long descriptions wrap rather than
+           extend outside the canvas area. */
+        .vis-tooltip {
+            max-width: 280px;
+            white-space: normal;
+            word-wrap: break-word;
+            line-height: 1.5;
+            font-size: 13px;
+        }
+
         .loop-info.reinforcing {
             border-left-color: #dc3545;
         }
-        
+
         .loop-info.balancing {
             border-left-color: #28a745;
         }
