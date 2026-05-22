@@ -1,0 +1,262 @@
+#!/bin/bash
+# bk-check-social-cover
+#
+# Verify Open Graph social media tags on the COVER PAGE (home page) of an
+# intelligent textbook. Checks og:title, og:description, and og:image.
+#
+# Strict rule: the og:image basename on the home page MUST be "cover.png".
+# Any other filename (e.g. cover-social-media-preview.png, social.jpg) is
+# treated as an error.
+#
+# Usage:
+#   bk-check-social-cover <name>            # e.g. bk-check-social-cover algebra-1
+#   bk-check-social-cover <url>             # e.g. bk-check-social-cover https://dmccreary.github.io/algebra-1/
+#
+# If a bare name is given, the URL is resolved as:
+#   https://dmccreary.github.io/<name>/
+
+set -u
+
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+# Open Graph recommended lengths
+# Title: 40-60 optimal, max 90
+OG_TITLE_MIN=10
+OG_TITLE_OPTIMAL_MIN=40
+OG_TITLE_OPTIMAL_MAX=60
+OG_TITLE_MAX=90
+
+# Description: 55-200 optimal, max 300
+OG_DESC_MIN=30
+OG_DESC_OPTIMAL_MIN=55
+OG_DESC_OPTIMAL_MAX=200
+OG_DESC_MAX=300
+
+# Required image basename for the cover page
+REQUIRED_IMAGE_BASENAME="cover.png"
+
+# Default URL pattern for bare names
+DEFAULT_HOST="https://dmccreary.github.io"
+
+ERRORS=0
+WARNINGS=0
+
+# ----------------------------------------------------------------
+# Argument handling
+# ----------------------------------------------------------------
+if [ $# -ne 1 ]; then
+    echo -e "${RED}Usage: bk-check-social-cover <textbook-name-or-url>${NC}" >&2
+    echo "" >&2
+    echo "Examples:" >&2
+    echo "  bk-check-social-cover algebra-1" >&2
+    echo "  bk-check-social-cover https://dmccreary.github.io/algebra-1/" >&2
+    exit 2
+fi
+
+INPUT="$1"
+
+if [[ "$INPUT" =~ ^https?:// ]]; then
+    URL="$INPUT"
+    NAME=$(echo "$URL" | sed -E 's#^https?://[^/]+/##; s#/.*##')
+else
+    NAME="$INPUT"
+    URL="${DEFAULT_HOST}/${NAME}/"
+fi
+
+# Ensure URL ends with a slash so we hit the home page, not a redirect
+case "$URL" in
+    */) ;;
+    *) URL="${URL}/" ;;
+esac
+
+echo -e "${BLUE}================================================================${NC}"
+echo -e "${GREEN}Intelligent Textbook Cover Page Social Tag Checker${NC}"
+echo -e "${BLUE}================================================================${NC}"
+echo ""
+echo -e "Textbook: ${YELLOW}${NAME}${NC}"
+echo -e "URL:      ${CYAN}${URL}${NC}"
+echo ""
+
+# ----------------------------------------------------------------
+# Fetch HTML
+# ----------------------------------------------------------------
+if ! command -v curl >/dev/null 2>&1; then
+    echo -e "${RED}Error: curl is required but not installed.${NC}" >&2
+    exit 2
+fi
+
+TMP_HTML=$(mktemp -t bk-check-social-cover.XXXXXX.html)
+trap 'rm -f "$TMP_HTML"' EXIT
+
+HTTP_CODE=$(curl -sS -L -o "$TMP_HTML" -w "%{http_code}" "$URL" || echo "000")
+
+if [ "$HTTP_CODE" != "200" ]; then
+    echo -e "${RED}Error: failed to fetch $URL (HTTP $HTTP_CODE)${NC}" >&2
+    exit 1
+fi
+
+if [ ! -s "$TMP_HTML" ]; then
+    echo -e "${RED}Error: empty response body from $URL${NC}" >&2
+    exit 1
+fi
+
+# ----------------------------------------------------------------
+# Helpers
+# ----------------------------------------------------------------
+
+# Extract the content of a meta tag identified by property="..." (or name="...").
+# Handles arbitrary attribute order and stray whitespace.
+extract_meta() {
+    local prop="$1"
+    local file="$2"
+    local result=""
+
+    # property="X" ... content="Y"
+    result=$(sed -n "s/.*<meta[^>]*property=\"$prop\"[^>]*content=\"\([^\"]*\)\".*/\1/p" "$file" | head -1)
+    # content="Y" ... property="X"
+    if [ -z "$result" ]; then
+        result=$(sed -n "s/.*<meta[^>]*content=\"\([^\"]*\)\"[^>]*property=\"$prop\".*/\1/p" "$file" | head -1)
+    fi
+    # name="X" ... content="Y"
+    if [ -z "$result" ]; then
+        result=$(sed -n "s/.*<meta[^>]*name=\"$prop\"[^>]*content=\"\([^\"]*\)\".*/\1/p" "$file" | head -1)
+    fi
+    # content="Y" ... name="X"
+    if [ -z "$result" ]; then
+        result=$(sed -n "s/.*<meta[^>]*content=\"\([^\"]*\)\"[^>]*name=\"$prop\".*/\1/p" "$file" | head -1)
+    fi
+
+    printf '%s' "$result"
+}
+
+# Check string length against (min, opt_min, opt_max, max).
+# Returns: 0=OK, 1=hard error (missing/too short/too long), 2=warning (suboptimal range).
+check_length() {
+    local value="$1"
+    local min="$2"
+    local opt_min="$3"
+    local opt_max="$4"
+    local max="$5"
+    local len=${#value}
+
+    if [ "$len" -eq 0 ]; then
+        echo -e "  ${RED}MISSING${NC}"
+        return 1
+    elif [ "$len" -lt "$min" ]; then
+        echo -e "  ${RED}TOO SHORT${NC} ($len chars, minimum $min)"
+        return 1
+    elif [ "$len" -gt "$max" ]; then
+        echo -e "  ${RED}TOO LONG${NC} ($len chars, maximum $max)"
+        return 1
+    elif [ "$len" -lt "$opt_min" ]; then
+        echo -e "  ${YELLOW}SHORT${NC} ($len chars, optimal $opt_min-$opt_max)"
+        return 2
+    elif [ "$len" -gt "$opt_max" ]; then
+        echo -e "  ${YELLOW}LONG${NC} ($len chars, optimal $opt_min-$opt_max)"
+        return 2
+    else
+        echo -e "  ${GREEN}OK${NC} ($len chars, optimal $opt_min-$opt_max)"
+        return 0
+    fi
+}
+
+# ----------------------------------------------------------------
+# og:title
+# ----------------------------------------------------------------
+echo -e "${BLUE}--- og:title ---${NC}"
+OG_TITLE=$(extract_meta "og:title" "$TMP_HTML")
+
+if [ -z "$OG_TITLE" ]; then
+    echo -e "  ${RED}MISSING: og:title meta tag not found${NC}"
+    echo -e "  ${CYAN}Add: <meta property=\"og:title\" content=\"Your Book Title\">${NC}"
+    ERRORS=$((ERRORS + 1))
+else
+    echo -e "  Content: \"$OG_TITLE\""
+    echo -n "  Length: "
+    check_length "$OG_TITLE" $OG_TITLE_MIN $OG_TITLE_OPTIMAL_MIN $OG_TITLE_OPTIMAL_MAX $OG_TITLE_MAX
+    rc=$?
+    [ $rc -eq 1 ] && ERRORS=$((ERRORS + 1))
+    [ $rc -eq 2 ] && WARNINGS=$((WARNINGS + 1))
+fi
+echo ""
+
+# ----------------------------------------------------------------
+# og:description
+# ----------------------------------------------------------------
+echo -e "${BLUE}--- og:description ---${NC}"
+OG_DESC=$(extract_meta "og:description" "$TMP_HTML")
+
+if [ -z "$OG_DESC" ]; then
+    echo -e "  ${RED}MISSING: og:description meta tag not found${NC}"
+    echo -e "  ${CYAN}Add: <meta property=\"og:description\" content=\"One- or two-sentence summary of the book.\">${NC}"
+    ERRORS=$((ERRORS + 1))
+else
+    echo -e "  Content: \"$OG_DESC\""
+    echo -n "  Length: "
+    check_length "$OG_DESC" $OG_DESC_MIN $OG_DESC_OPTIMAL_MIN $OG_DESC_OPTIMAL_MAX $OG_DESC_MAX
+    rc=$?
+    [ $rc -eq 1 ] && ERRORS=$((ERRORS + 1))
+    [ $rc -eq 2 ] && WARNINGS=$((WARNINGS + 1))
+fi
+echo ""
+
+# ----------------------------------------------------------------
+# og:image (must be cover.png on the home page)
+# ----------------------------------------------------------------
+echo -e "${BLUE}--- og:image ---${NC}"
+OG_IMAGE=$(extract_meta "og:image" "$TMP_HTML")
+
+if [ -z "$OG_IMAGE" ]; then
+    echo -e "  ${RED}MISSING: og:image meta tag not found${NC}"
+    echo -e "  ${CYAN}Add: <meta property=\"og:image\" content=\"${URL}img/${REQUIRED_IMAGE_BASENAME}\">${NC}"
+    ERRORS=$((ERRORS + 1))
+else
+    echo -e "  URL:      \"$OG_IMAGE\""
+    # Strip query string / fragment before taking the basename
+    CLEAN_IMAGE="${OG_IMAGE%%\?*}"
+    CLEAN_IMAGE="${CLEAN_IMAGE%%#*}"
+    IMAGE_BASENAME=$(basename "$CLEAN_IMAGE")
+    echo -e "  Basename: \"$IMAGE_BASENAME\""
+
+    if [ "$IMAGE_BASENAME" = "$REQUIRED_IMAGE_BASENAME" ]; then
+        echo -e "  ${GREEN}OK${NC} cover image basename is \"$REQUIRED_IMAGE_BASENAME\""
+
+        # Verify the image actually loads (HEAD request)
+        IMG_CODE=$(curl -sS -L -o /dev/null -w "%{http_code}" -I "$OG_IMAGE" || echo "000")
+        if [ "$IMG_CODE" = "200" ]; then
+            echo -e "  ${GREEN}OK${NC} cover image reachable (HTTP 200)"
+        else
+            echo -e "  ${RED}ERROR${NC} cover image not reachable (HTTP $IMG_CODE): $OG_IMAGE"
+            ERRORS=$((ERRORS + 1))
+        fi
+    else
+        echo -e "  ${RED}ERROR: home page og:image MUST be \"$REQUIRED_IMAGE_BASENAME\"${NC}"
+        echo -e "  ${CYAN}Found \"$IMAGE_BASENAME\" — rename the image (and update the meta tag) to \"$REQUIRED_IMAGE_BASENAME\".${NC}"
+        ERRORS=$((ERRORS + 1))
+    fi
+fi
+echo ""
+
+# ----------------------------------------------------------------
+# Summary
+# ----------------------------------------------------------------
+echo -e "${BLUE}================================================================${NC}"
+echo -e "${GREEN}Summary${NC}"
+echo -e "${BLUE}================================================================${NC}"
+
+if [ $ERRORS -eq 0 ] && [ $WARNINGS -eq 0 ]; then
+    echo -e "${GREEN}All cover-page Open Graph tags are present and properly configured.${NC}"
+    exit 0
+elif [ $ERRORS -eq 0 ]; then
+    echo -e "${YELLOW}${WARNINGS} warning(s) found.${NC} Social sharing will work but could be optimized."
+    exit 0
+else
+    echo -e "${RED}${ERRORS} error(s)${NC} and ${YELLOW}${WARNINGS} warning(s)${NC} found."
+    exit 1
+fi
