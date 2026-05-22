@@ -139,19 +139,7 @@ bloom_level: {bloom_level}
 
 # {title}
 
-!!! warning "Scaffold"
-    This MicroSim has been scaffolded from its specification. The interactive
-    implementation has not been built yet.
 
-## Learning Objective
-
-{learning_objective}
-
-- **Bloom Level:** {bloom_level}
-- **Bloom Verb:** {bloom_verb}
-- **Library:** {library}
-
-## Preview
 
 <iframe src="main.html" width="100%" height="600"></iframe>
 
