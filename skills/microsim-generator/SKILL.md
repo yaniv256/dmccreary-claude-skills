@@ -493,7 +493,7 @@ Scores each MicroSim on a 100-point rubric:
 | Screenshot | 5 | PNG file exists |
 | Lesson Plan | 10 | Section present in index.md |
 | References | 5 | Section present in index.md |
-| p5.js conventions | 5 | updateCanvasSize, no DOM buttons, querySelector parenting |
+| p5.js conventions | 5 | updateCanvasSize, no DOM buttons, querySelector parenting, no textFont('Segoe UI') |
 
 **Grade scale:** A (85+), B (70-84), C (50-69), D (<50)
 
@@ -844,6 +844,7 @@ This enables counting and discovery of MicroSims across GitHub using code search
 - [ ] Does not hijack page scrolling when embedded in an iframe
 - [ ] Educational purpose is clear
 - [ ] Code is well-commented
+- [ ] Does not call `textFont()` unless a specific font is explicitly required by the design — never use `textFont('Segoe UI')`, which is a Windows-only font unavailable on macOS/Linux
 
 ## Examples
 
