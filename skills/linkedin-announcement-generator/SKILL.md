@@ -28,7 +28,10 @@ Use this skill when:
 
 The intelligent textbook project should have:
 
-- A `docs/learning-graph/book-metrics.md` file containing textbook statistics
+- A `docs/learning-graph/book-metrics.json` file containing the canonical
+  textbook statistics (produced by the book-metrics tool). If it is missing,
+  generate it first with `bk-generate-book-metrics` (or the
+  `python3 "$BK_HOME/src/book-metrics/book-metrics.py" docs` fallback).
 - A `mkdocs.yml` file with site_name, site_url, and site_description
 - Deployed site on GitHub Pages (or another hosting platform)
 - Optional: `docs/learning-graph/chapter-metrics.md` for chapter-level details
@@ -62,25 +65,40 @@ site_description: 'An interactive geometry textbook with MicroSims and quizzes'
 
 ### Step 2: Analyze Book Metrics
 
-Read and parse `docs/learning-graph/book-metrics.md` to extract:
+Read the canonical metrics file `docs/learning-graph/book-metrics.json` — do
+**not** parse the human-readable `book-metrics.md` table (brittle) or recount
+content yourself. This is the same source the README and case-study skills use,
+so the numbers stay consistent across every artifact.
 
-**Core Metrics:**
+```bash
+python3 - <<'PY'
+import json, pathlib, sys
+p = pathlib.Path("docs/learning-graph/book-metrics.json")
+if not p.exists():
+    sys.exit("book-metrics.json missing — run bk-generate-book-metrics first")
+m = json.loads(p.read_text())["metrics"]
+print(json.dumps(m, indent=2))
+PY
+```
 
-- Number of chapters
-- Number of concepts in learning graph
-- Number of glossary terms
-- Number of FAQ questions
-- Number of quiz questions
-- Number of diagrams
-- Number of equations
-- Number of MicroSims (interactive simulations)
-- Total word count
-- Number of hyperlinks
-- Equivalent printed pages
+**Core Metrics (keys in the `metrics` object):**
 
-**Parse the metrics table:**
+- `chapters` — Number of chapters
+- `concepts` — Number of concepts in the learning graph
+- `glossaryTerms` — Number of glossary terms
+- `faqs` — Number of FAQ questions
+- `quizQuestions` — Number of quiz questions
+- `diagrams` — Number of diagrams
+- `equations` — Number of equations
+- `microsims` — Number of MicroSims (interactive simulations)
+- `words` — Total word count
+- `links` — Number of hyperlinks
+- `equivalentPages` — Equivalent printed pages
+- `developmentStage` — Author-declared publication stage
 
-Look for the table starting with `| Metric Name | Value | Link | Notes |` and extract values from the second column.
+If `book-metrics.json` does not exist, regenerate it with
+`bk-generate-book-metrics` before reading. The format is defined by
+`src/book-metrics/book-metrics.schema.json`.
 
 **Handle missing metrics gracefully:**
 
@@ -348,7 +366,7 @@ Present the LinkedIn announcement(s) in a clear, copy-paste ready format:
 Before finalizing, check that the announcement:
 
 - [ ] Includes the live site URL (working link)
-- [ ] Contains accurate metrics from book-metrics.md
+- [ ] Contains accurate metrics from book-metrics.json
 - [ ] Has 10-15 relevant hashtags
 - [ ] Mentions AI transparency
 - [ ] Includes a clear call to action
@@ -477,24 +495,26 @@ The skill can be customized to:
 
 ## Supporting Scripts
 
-The skill can optionally include a Python script to automate metric extraction:
+Metrics come straight from the canonical `book-metrics.json` — no markdown
+parsing required. A small helper only needs to load the JSON and the site
+config:
 
 **`scripts/linkedin-metrics-extractor.py`**
 
 ```python
 #!/usr/bin/env python3
-"""Extract metrics from book-metrics.md for LinkedIn announcements."""
+"""Load canonical metrics + site config for LinkedIn announcements."""
 
-import re
+import json
 import yaml
 
-def extract_book_metrics(metrics_file):
-    """Parse book-metrics.md and return dictionary of metrics."""
-    # Implementation: Parse markdown table
-    pass
+def load_book_metrics(metrics_json="docs/learning-graph/book-metrics.json"):
+    """Return the `metrics` dict from the canonical book-metrics.json."""
+    with open(metrics_json, encoding="utf-8") as f:
+        return json.load(f)["metrics"]
 
 def extract_site_config(mkdocs_file):
-    """Parse mkdocs.yml and return site metadata."""
+    """Parse mkdocs.yml and return site metadata (name, url, description)."""
     # Implementation: Load YAML and extract site_name, site_url, etc.
     pass
 
@@ -504,7 +524,7 @@ def format_number(n):
     pass
 
 # Usage:
-# python linkedin-metrics-extractor.py docs/learning-graph/book-metrics.md mkdocs.yml
+# python linkedin-metrics-extractor.py docs/learning-graph/book-metrics.json mkdocs.yml
 ```
 
 ## Quality Standards
@@ -522,7 +542,7 @@ A high-quality LinkedIn announcement should:
 
 ## Troubleshooting
 
-**Issue:** Metrics not found in book-metrics.md
+**Issue:** Metrics not found in book-metrics.json
 
 **Solution:** Generate the metrics first — run `bk-generate-book-metrics` (or invoke `book-installer` and request the book-metrics guide) to create the metrics file
 

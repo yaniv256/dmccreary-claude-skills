@@ -18,7 +18,11 @@ from typing import Dict, List, Tuple, Any
 from datetime import datetime
 
 # Version of the Book Metrics Generator
-VERSION = "0.07"
+VERSION = "0.08"
+
+# Version of the book-metrics.json file format (see book-metrics.schema.json).
+# Bump only on a breaking change to the JSON structure, not on every code change.
+METRICS_FILE_VERSION = "1.0"
 
 
 class BookMetricsGenerator:
@@ -997,15 +1001,75 @@ class BookMetricsGenerator:
 
         return totals
 
-    def update_book_metadata(self, output_dir: Path = None) -> None:
+    def build_metrics_payload(self) -> Dict[str, Any]:
+        """Build the full book-metrics.json payload (provenance + totals).
+
+        This is the single in-memory representation that is written verbatim to
+        the canonical docs/learning-graph/book-metrics.json file and whose
+        `metrics` block is also mirrored into book-metadata.json. Generating
+        both files from one payload guarantees the two can never drift.
+
+        Returns:
+            Dict conforming to book-metrics.schema.json.
+        """
+        return {
+            "$schema": (
+                "https://raw.githubusercontent.com/dmccreary/claude-skills/"
+                "main/src/book-metrics/book-metrics.schema.json"
+            ),
+            "metricsVersion": METRICS_FILE_VERSION,
+            "metricsGeneratedBy": f"Book Metrics Python Program v{VERSION}",
+            "metricsGeneratedOn": datetime.now().strftime("%B %d, %Y at %I:%M %p"),
+            "metricsGeneratedOnISO": datetime.now().replace(microsecond=0).isoformat(),
+            "metrics": self.collect_book_totals(),
+        }
+
+    def write_book_metrics_json(self, output_dir: Path = None,
+                                payload: Dict[str, Any] = None) -> None:
+        """Write the canonical, machine-generated book-metrics.json.
+
+        This file is the SINGLE SOURCE OF TRUTH for book-wide totals. Unlike
+        book-metadata.json (which holds author-supplied descriptive fields and
+        is merged in place), book-metrics.json is fully owned by this script and
+        overwritten wholesale every run - there are no hand-edited fields to
+        preserve, so there is no merge logic and no risk of clobbering author
+        content. Consuming skills (readme-generator, linkedin-announcement-
+        generator, case-study-generator) READ this file instead of re-deriving
+        counts from markdown.
+
+        Args:
+            output_dir: Directory to write book-metrics.json to
+                        (defaults to the learning-graph directory).
+            payload: Pre-built payload from build_metrics_payload(); built here
+                     if not supplied.
+        """
+        if output_dir is None:
+            output_dir = self.learning_graph_dir
+        if payload is None:
+            payload = self.build_metrics_payload()
+
+        metrics_file = output_dir / "book-metrics.json"
+        with open(metrics_file, 'w', encoding='utf-8') as f:
+            json.dump(payload, f, indent=2, ensure_ascii=False)
+            f.write("\n")
+        print(f"✅ Wrote {metrics_file}")
+
+    def update_book_metadata(self, output_dir: Path = None,
+                             payload: Dict[str, Any] = None) -> None:
         """Create or update book-metadata.json with the book's total metrics.
 
-        The learning-graph-generator workflow creates book-metadata.json with
+        The canonical home for these totals is book-metrics.json (written by
+        write_book_metrics_json). This method maintains a BACKWARD-COMPATIBLE
+        mirror inside book-metadata.json for consumers that have not yet
+        migrated (notably the intelligent-textbooks case-studies index). The
+        learning-graph-generator workflow creates book-metadata.json with
         descriptive fields (title, description, creator, cover image, etc.).
         This method PRESERVES those author-supplied fields and adds/updates a
-        single `metrics` object holding the book-wide totals used in the
-        intelligent-textbooks case-studies index. Per-chapter metrics are never
-        written here - only totals like chapter count, quiz count, FAQ count.
+        single `metrics` object holding the book-wide totals. Per-chapter
+        metrics are never written here - only totals.
+
+        The mirrored `metrics` block is taken from the SAME payload used for
+        book-metrics.json, so the two files can never drift.
 
         If the existing file cannot be parsed as JSON it is left untouched (we
         never clobber the author's metadata) and a warning is printed.
@@ -1013,9 +1077,13 @@ class BookMetricsGenerator:
         Args:
             output_dir: Directory containing book-metadata.json
                         (defaults to the learning-graph directory)
+            payload: Shared payload from build_metrics_payload(); built here if
+                     not supplied.
         """
         if output_dir is None:
             output_dir = self.learning_graph_dir
+        if payload is None:
+            payload = self.build_metrics_payload()
 
         metadata_file = output_dir / "book-metadata.json"
 
@@ -1035,11 +1103,11 @@ class BookMetricsGenerator:
                 return
 
         # Merge: replace only the metrics block + provenance, keep everything
-        # else the author put in book-metadata.json.
-        data["metrics"] = self.collect_book_totals()
-        data["metricsGeneratedBy"] = f"Book Metrics Python Program v{VERSION}"
-        data["metricsGeneratedOn"] = datetime.now().strftime(
-            "%B %d, %Y at %I:%M %p")
+        # else the author put in book-metadata.json. Sourced from the shared
+        # payload so book-metadata.json and book-metrics.json stay identical.
+        data["metrics"] = payload["metrics"]
+        data["metricsGeneratedBy"] = payload["metricsGeneratedBy"]
+        data["metricsGeneratedOn"] = payload["metricsGeneratedOn"]
 
         with open(metadata_file, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -1047,7 +1115,13 @@ class BookMetricsGenerator:
         print(f"✅ Updated {metadata_file}")
 
     def generate_metrics(self, output_dir: Path = None):
-        """Generate both metrics files and update book-metadata.json.
+        """Generate the metrics reports and the machine-readable metrics files.
+
+        Writes four artifacts to the learning-graph directory:
+          - book-metrics.md       (human-readable book totals)
+          - chapter-metrics.md    (human-readable per-chapter breakdown)
+          - book-metrics.json     (canonical machine-readable totals)
+          - book-metadata.json    (author metadata + mirrored metrics block)
 
         Args:
             output_dir: Directory to write files to (defaults to learning-graph directory)
@@ -1072,8 +1146,16 @@ class BookMetricsGenerator:
             f.write(chapter_metrics_content)
         print(f"✅ Generated {chapter_metrics_file}")
 
-        # Create or update book-metadata.json with book-wide totals
-        self.update_book_metadata(output_dir)
+        # Build the totals + provenance payload ONCE, then write both JSON
+        # files from it so book-metrics.json and book-metadata.json's mirrored
+        # `metrics` block are guaranteed identical.
+        payload = self.build_metrics_payload()
+
+        # Canonical machine-readable totals (single source of truth)
+        self.write_book_metrics_json(output_dir, payload)
+
+        # Backward-compatible mirror inside author metadata
+        self.update_book_metadata(output_dir, payload)
 
 
 def main():
@@ -1093,7 +1175,15 @@ def main():
     generator.generate_metrics()
 
     print(f"\n✅ Book metrics generation version {VERSION} complete!")
-    print("\nUpdates in v0.07:")
+    print("\nUpdates in v0.08:")
+    print("  - NEW canonical docs/learning-graph/book-metrics.json - the single")
+    print("    source of truth for book-wide totals. Fully machine-owned and")
+    print("    overwritten each run; validates against book-metrics.schema.json.")
+    print("  - Consuming skills (README, LinkedIn, case-study) should READ this")
+    print("    file instead of re-deriving counts from markdown.")
+    print("  - book-metadata.json still gets a mirrored `metrics` block (built")
+    print("    from the same payload) for backward compatibility.")
+    print("\nPrevious updates (v0.07):")
     print("  - Create/update docs/learning-graph/book-metadata.json with the")
     print("    book-wide totals used in the case-studies index (concepts,")
     print("    chapters, MicroSims, stories, words, glossary, quiz, FAQ, etc.)")

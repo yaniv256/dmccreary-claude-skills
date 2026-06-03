@@ -7,16 +7,27 @@ or estimate the printed-page equivalent of the digital book.
 
 ## What It Produces
 
-Running the metrics tool writes/updates three files in `docs/learning-graph/`:
+Running the metrics tool writes/updates four files in `docs/learning-graph/`:
 
 1. **`book-metrics.md`** — overall book statistics (Book Composition table +
    Student-Facing Content Metrics table).
 2. **`chapter-metrics.md`** — per-chapter breakdown (sections, diagrams,
    equations, words, links, quiz questions, references).
-3. **`book-metadata.json`** — the machine-readable `metrics` block of book-wide
-   totals (see [Book Metadata JSON](#book-metadata-json) below). Created during
-   learning-graph generation and **merged in place** here; author fields are
-   preserved.
+3. **`book-metrics.json`** — the **canonical, machine-readable** book-wide
+   totals and the **single source of truth** for every skill that needs the
+   numbers (see [Book Metrics JSON](#book-metrics-json) below). Fully owned by
+   the script and overwritten each run; validated by `book-metrics.schema.json`.
+4. **`book-metadata.json`** — author-supplied descriptive fields (title,
+   creator, license, cover image, repository, …) with a **mirrored** `metrics`
+   block for backward compatibility (see [Book Metadata JSON](#book-metadata-json)).
+   Created during learning-graph generation and **merged in place** here; author
+   fields are preserved.
+
+> **Which file should a skill read?** For any **count** (concepts, chapters,
+> MicroSims, words, glossary terms, …) read **`book-metrics.json`**. For
+> **identity** (title, author, repo URL, license, cover image) read
+> `book-metadata.json` / `mkdocs.yml`. Never re-derive counts by parsing
+> markdown or running `find | wc` — that is exactly the drift this file removes.
 
 ## Prerequisites
 
@@ -96,19 +107,22 @@ Pages = (Total Words ÷ 250) + (Diagrams × 0.25) + (MicroSims × 0.5)
 Assumptions: 250 words per printed page, each diagram 0.25 page, each MicroSim
 0.5 page.
 
-## Book Metadata JSON
+## Book Metrics JSON
 
-The script also creates or updates `docs/learning-graph/book-metadata.json`,
-the same file created when the learning graph is generated (it holds
-descriptive fields: title, description, creator, cover image, repository,
-license, etc.). Each run **merges** a single `metrics` object plus two
-provenance fields without disturbing any author-supplied fields:
+`docs/learning-graph/book-metrics.json` is the **canonical, machine-readable**
+record of book-wide totals — the **single source of truth** that the
+README generator, LinkedIn announcement generator, case-study generator, and
+status reports all read. It is **fully owned by the script**: there are no
+hand-edited fields, so every run overwrites it wholesale (no merge, no risk of
+clobbering author content).
 
 ```json
 {
-  "title": "My Intelligent Textbook",
-  "description": "...",
-  "creator": "Author Name",
+  "$schema": "https://raw.githubusercontent.com/dmccreary/claude-skills/main/src/book-metrics/book-metrics.schema.json",
+  "metricsVersion": "1.0",
+  "metricsGeneratedBy": "Book Metrics Python Program v0.08",
+  "metricsGeneratedOn": "June 03, 2026 at 10:13 AM",
+  "metricsGeneratedOnISO": "2026-06-03T10:13:00",
   "metrics": {
     "concepts": 200,
     "chapters": 12,
@@ -128,9 +142,7 @@ provenance fields without disturbing any author-supplied fields:
     "mascotImages": 7,
     "developmentStage": "Complete",
     "equivalentPages": 250
-  },
-  "metricsGeneratedBy": "Book Metrics Python Program v0.07",
-  "metricsGeneratedOn": "June 03, 2026 at 10:13 AM"
+  }
 }
 ```
 
@@ -139,18 +151,83 @@ These are the book-wide totals that feed the case-study cards in the
 `docs/case-studies/index.md` page (e.g. "200 Concepts · 12 Chapters · 18
 MicroSims · 45K Words · 200 Glossary Terms").
 
-**Rules the script follows for `book-metadata.json`:**
+**Rules the script follows for `book-metrics.json`:**
 
 - **Only book-wide totals** go in the `metrics` object. Per-chapter breakdowns
   are intentionally excluded — those live only in `chapter-metrics.md`.
-- **Author fields are preserved.** Only the `metrics` block and the two
-  `metricsGenerated*` fields are written; everything else is left untouched.
 - **Botany books** (those with a `docs/plants/` directory) additionally get
   `speciesCards`, `speciesCardsWithIllustration`, `speciesCardsWithPhotos`,
-  and `speciesCardsWithQuickFacts` totals.
+  and `speciesCardsWithQuickFacts` totals inside `metrics`.
+- **Forward compatible:** new count metrics can be added without a format change
+  — the schema requires any unrecognized `metrics` key to be a non-negative
+  integer.
+
+### JSON Schema and Validation
+
+The format is defined by `src/book-metrics/book-metrics.schema.json`
+(JSON Schema Draft 2020-12). Validate any file with:
+
+```bash
+python3 "$BK_HOME/src/book-metrics/validate-book-metrics.py" \
+  docs/learning-graph/book-metrics.json
+```
+
+The validator uses the `jsonschema` package for full validation when it is
+installed, and falls back to a dependency-free required-keys/type check
+otherwise. Exit code `0` = valid, `1` = invalid, `2` = file/usage error.
+
+### Consumer Contract (read, don't re-derive)
+
+Any skill that needs book totals MUST read `book-metrics.json` rather than
+counting markdown itself. Recommended pattern:
+
+```bash
+# Prefer the canonical file…
+python3 - <<'PY'
+import json, pathlib, sys
+p = pathlib.Path("docs/learning-graph/book-metrics.json")
+if not p.exists():
+    sys.exit("book-metrics.json missing — run bk-generate-book-metrics first")
+m = json.loads(p.read_text())["metrics"]
+print(f"{m['concepts']} concepts · {m['chapters']} chapters · "
+      f"{m['microsims']} MicroSims · {m['words']:,} words")
+PY
+```
+
+If `book-metrics.json` is missing or stale, a consuming skill should run
+`bk-generate-book-metrics` (or the `python3 "$BK_HOME/..."` fallback) to refresh
+it, then read the result — never silently fall back to ad-hoc counting, which
+reintroduces the drift this file exists to eliminate.
+
+## Book Metadata JSON
+
+`docs/learning-graph/book-metadata.json` holds the **author-supplied descriptive
+fields** (title, description, creator, cover image, repository, license, etc.),
+created when the learning graph is generated. For backward compatibility the
+metrics run also **mirrors** the `metrics` block here — built from the *same*
+payload as `book-metrics.json`, so the two can never drift:
+
+```json
+{
+  "title": "My Intelligent Textbook",
+  "description": "...",
+  "creator": "Author Name",
+  "metrics": { "... identical to book-metrics.json metrics ..." },
+  "metricsGeneratedBy": "Book Metrics Python Program v0.08",
+  "metricsGeneratedOn": "June 03, 2026 at 10:13 AM"
+}
+```
+
+**Rules the script follows for `book-metadata.json`:**
+
+- **Author fields are preserved.** Only the `metrics` block and the two
+  `metricsGenerated*` fields are written; everything else is left untouched.
 - **Safety:** if the existing `book-metadata.json` cannot be parsed as a JSON
   object, the script leaves it untouched and prints a warning rather than risk
   clobbering the author's metadata.
+- **Migration note:** new consumers should read `book-metrics.json`. The
+  mirrored block here exists only until existing readers (e.g. the
+  intelligent-textbooks case-studies index) migrate to the canonical file.
 
 ## Add to Navigation
 

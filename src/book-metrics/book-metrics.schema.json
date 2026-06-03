@@ -1,0 +1,185 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/dmccreary/claude-skills/main/src/book-metrics/book-metrics.schema.json",
+  "title": "Intelligent Textbook Book Metrics",
+  "description": "Canonical, machine-generated quantitative metrics for an intelligent textbook. Written and overwritten on every run by src/book-metrics/book-metrics.py to docs/learning-graph/book-metrics.json. This file is the SINGLE SOURCE OF TRUTH for book-wide totals: consuming skills (readme-generator, linkedin-announcement-generator, case-study-generator, book-status reports) READ this file rather than re-deriving counts. It holds numbers and provenance only - descriptive/author fields (title, creator, license, cover image, repository URL) live in book-metadata.json and must not be duplicated here.",
+  "type": "object",
+  "required": ["metricsVersion", "metricsGeneratedBy", "metricsGeneratedOn", "metrics"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Optional pointer back to this schema for editor validation."
+    },
+    "metricsVersion": {
+      "type": "string",
+      "description": "Semantic version of the book-metrics.json file format (not the generator version). Bumped only on a breaking change to this schema.",
+      "pattern": "^\\d+\\.\\d+$",
+      "examples": ["1.0"]
+    },
+    "metricsGeneratedBy": {
+      "type": "string",
+      "description": "Human-readable provenance string identifying the program and version that produced this file.",
+      "examples": ["Book Metrics Python Program v0.08"]
+    },
+    "metricsGeneratedOn": {
+      "type": "string",
+      "description": "Human-readable timestamp of the generation run (for display in reports and READMEs).",
+      "examples": ["June 03, 2026 at 10:13 AM"]
+    },
+    "metricsGeneratedOnISO": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp of the generation run, for machine comparison and staleness checks."
+    },
+    "metrics": {
+      "type": "object",
+      "description": "Book-wide totals. Per-chapter breakdowns are intentionally excluded - those live only in chapter-metrics.md. Any additional key not listed below must be a non-negative integer count (the format is forward-compatible with new count metrics).",
+      "required": [
+        "concepts",
+        "chapters",
+        "microsims",
+        "stories",
+        "glossaryTerms",
+        "faqs",
+        "quizQuestions",
+        "chapterQuizzes",
+        "chapterReferences",
+        "references",
+        "diagrams",
+        "equations",
+        "words",
+        "links",
+        "appendices",
+        "mascotImages",
+        "developmentStage",
+        "equivalentPages"
+      ],
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "Forward-compatibility: any unrecognized metric must be a non-negative integer count."
+      },
+      "properties": {
+        "concepts": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Concept rows in docs/learning-graph/learning-graph.csv (excluding the header)."
+        },
+        "chapters": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Numbered chapter directories under docs/chapters/ that contain an index.md."
+        },
+        "microsims": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "MicroSim directories under docs/sims/ that contain an index.md."
+        },
+        "stories": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Story directories under docs/stories/ that contain an index.md."
+        },
+        "glossaryTerms": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "H4 (#### ) term headers in docs/glossary.md."
+        },
+        "faqs": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "H3 (### ) question headers in docs/faq.md."
+        },
+        "quizQuestions": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total quiz questions across all chapter quiz.md files."
+        },
+        "chapterQuizzes": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of chapters that have a quiz.md file."
+        },
+        "chapterReferences": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of chapters that have a references.md file."
+        },
+        "references": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total reference entries across all chapter references.md files."
+        },
+        "diagrams": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "H4 headers starting with '#### Diagram:' in student-facing markdown."
+        },
+        "equations": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "LaTeX expressions using $ and $$ delimiters in student-facing markdown."
+        },
+        "words": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total words across student-facing markdown, excluding code blocks and URLs."
+        },
+        "links": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Markdown hyperlinks [text](url) in student-facing markdown."
+        },
+        "appendices": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Pages under docs/appendices/ excluding index.md."
+        },
+        "mascotImages": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Mascot pose images in docs/img/mascot/."
+        },
+        "developmentStage": {
+          "type": "string",
+          "description": "Publication stage from mkdocs.yml extra.development_stage or course-description.md front matter. Free text; 'Not specified' when absent.",
+          "examples": [
+            "Planning",
+            "Early Development",
+            "Draft",
+            "Substantially Complete",
+            "Complete",
+            "Published",
+            "Not specified"
+          ]
+        },
+        "equivalentPages": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Estimated printed-page equivalent: (words / 250) + (diagrams * 0.25) + (microsims * 0.5)."
+        },
+        "speciesCards": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Botany books only (docs/plants/ present): total species cards."
+        },
+        "speciesCardsWithIllustration": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Botany books only: species cards that include an illustration."
+        },
+        "speciesCardsWithPhotos": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Botany books only: species cards that include photographs."
+        },
+        "speciesCardsWithQuickFacts": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Botany books only: species cards that include a quick-facts table."
+        }
+      }
+    }
+  }
+}

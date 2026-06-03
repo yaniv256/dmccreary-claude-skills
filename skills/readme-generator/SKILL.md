@@ -140,35 +140,40 @@ Whether you're a student learning [TOPIC] for the first time or an educator look
 
 Gather and display project metrics to show completeness and scope.
 
-**Run Python script to collect metrics:**
+**Read the canonical metrics file — do NOT re-derive counts.**
 
-Call `scripts/collect-site-metrics.py` (or create it if needed) to gather:
+Book-wide totals are the single source of truth in
+`docs/learning-graph/book-metrics.json` (produced by the book-metrics tool and
+validated against `src/book-metrics/book-metrics.schema.json`). README metrics
+MUST come from this file so the README, LinkedIn announcement, and case-study
+card all show identical numbers.
 
-1. **Learning Graph Metrics** (from `docs/learning-graph/`):
-   - Number of concepts in concept graph
-   - Quality score
-   - Taxonomy distribution
+```bash
+# 1. Make sure the file is fresh (regenerate if missing or stale):
+bk-generate-book-metrics 2>/dev/null \
+  || python3 "$BK_HOME/src/book-metrics/book-metrics.py" docs
 
-2. **Content Metrics**:
-   - Number of chapters (count directories in `docs/chapters/`)
-   - Number of markdown files (`.md` files in `docs/`)
-   - Total word count (sum of all markdown files)
-   - Number of code blocks
-   - Number of lists and tables
+# 2. Read the totals:
+python3 - <<'PY'
+import json, pathlib
+m = json.loads(pathlib.Path("docs/learning-graph/book-metrics.json").read_text())["metrics"]
+for k in ("concepts","chapters","microsims","glossaryTerms","faqs",
+          "quizQuestions","words","diagrams","references","equivalentPages",
+          "developmentStage"):
+    print(f"{k}: {m.get(k)}")
+PY
+```
 
-3. **Interactive Elements**:
-   - Number of MicroSims (directories in `docs/sims/`)
-   - Number of quizzes (files named `quiz.md`)
-   - Total quiz questions (count in quiz files)
+The `metrics` object provides: `concepts`, `chapters`, `microsims`, `stories`,
+`glossaryTerms`, `faqs`, `quizQuestions`, `chapterQuizzes`, `chapterReferences`,
+`references`, `diagrams`, `equations`, `words`, `links`, `appendices`,
+`mascotImages`, `developmentStage`, and `equivalentPages`. For **identity**
+fields (title, author, repo URL, license) read `book-metadata.json` /
+`mkdocs.yml`.
 
-4. **Educational Resources**:
-   - Number of glossary terms (in `docs/glossary.md`)
-   - Number of FAQ questions (in `docs/faq.md`)
-   - Number of references (in `docs/references.md`)
-
-5. **Media Assets**:
-   - Number of images (`.png`, `.jpg`, `.svg` files)
-   - Number of diagrams (Mermaid, vis-network)
+Only fall back to `scripts/collect-site-metrics.py` (markdown/image scanning)
+for counts the metrics file does not provide — e.g. image-asset counts or
+code-block counts. Never recount concepts/chapters/words by hand.
 
 **Format as a table:**
 
