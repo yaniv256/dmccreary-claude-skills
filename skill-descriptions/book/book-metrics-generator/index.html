@@ -2071,12 +2071,21 @@ areas needing attention.</p>
 <li>Visualization recommendations</li>
 </ul>
 <h2 id="shell-script-access">Shell Script Access</h2>
-<p>For efficiency, the skill can also be run directly via shell script:</p>
-<div class="highlight"><table class="highlighttable"><tbody><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>~/.claude/skills/book-metrics-generator/scripts/book-metrics-generator.sh
+<div class="admonition note">
+<p class="admonition-title">Now part of book-installer</p>
+<p>Book metrics is no longer a standalone skill — the capability now lives as
+the <strong>book-metrics</strong> guide inside the <code>book-installer</code> meta-skill. Invoke
+<code>book-installer</code> and ask for book metrics, or run the shell wrapper below.</p>
+</div>
+<p>For efficiency, you can run the metrics generator directly via the shell wrapper:</p>
+<div class="highlight"><table class="highlighttable"><tbody><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>bk-generate-book-metrics
 </code></pre></div></td></tr></tbody></table></div>
+<p>This wrapper runs <code>$BK_HOME/src/book-metrics/book-metrics.py</code> against the
+project's <code>docs/</code> directory. If it is not on your <code>$PATH</code>, use the fallback
+<code>python3 "$BK_HOME/src/book-metrics/book-metrics.py" docs</code>.</p>
 <h2 id="integration">Integration</h2>
-<p>This skill is typically used after significant content development or as part of
-regular project status reporting. It works with any MkDocs Material-based
+<p>Book metrics is typically generated after significant content development or as
+part of regular project status reporting. It works with any MkDocs Material-based
 intelligent textbook following the standard structure.</p>
 
 
