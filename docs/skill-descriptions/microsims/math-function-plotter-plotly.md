@@ -564,7 +564,7 @@ The iframe will automatically embed within the page with proper responsive behav
 - [Plotly.js Official Documentation](https://plotly.com/javascript/)
 - [Plotly.js Line Charts](https://plotly.com/javascript/line-charts/)
 - [MDN Math Object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math)
-- [MicroSim Standardization](../microsim-standardization.md)
+- [MicroSim Standardization](microsim-standardization.md)
 - [Dublin Core Metadata](https://www.dublincore.org/specifications/dublin-core/dcmi-terms/)
 
 ## Skill Location

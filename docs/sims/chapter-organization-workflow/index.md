@@ -73,5 +73,5 @@ After exploring this workflow, students will be able to:
 
 ## References
 
-- [Book Chapter Generator Skill](../../skills/book-chapter-generator/SKILL.md)
-- [Learning Graph Generator Skill](../../skills/learning-graph-generator/SKILL.md)
+- [Book Chapter Generator Skill](https://github.com/dmccreary/claude-skills/blob/main/skills/book-chapter-generator/SKILL.md)
+- [Learning Graph Generator Skill](https://github.com/dmccreary/claude-skills/blob/main/skills/learning-graph-generator/SKILL.md)

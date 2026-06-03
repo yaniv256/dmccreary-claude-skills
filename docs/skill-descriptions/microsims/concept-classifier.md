@@ -137,7 +137,7 @@ This quiz format primarily addresses **Application (Level 3)** - students apply 
 ## Related Skills
 
 - [MicroSim P5 Generator](./microsim-p5.md) - General p5.js simulations
-- [Quiz Generator](../textbook-generation/quiz-generator.md) - Multiple choice quizzes for chapters
+- [Quiz Generator](../book/quiz-generator.md) - Multiple choice quizzes for chapters
 
 ## Template Location
 

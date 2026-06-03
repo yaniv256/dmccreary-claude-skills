@@ -60,4 +60,4 @@ it indicates readiness to proceed with the learning-graph-generator skill.
 This skill is typically the first step in the intelligent textbook creation
 workflow, ensuring a solid foundation before generating learning graphs.
 
-[Sample Execution Log of Course Description Analyzer](../prompts/course-description-skill.md)
+[Sample Execution Log of Course Description Analyzer](../../prompts/course-description-skill.md)

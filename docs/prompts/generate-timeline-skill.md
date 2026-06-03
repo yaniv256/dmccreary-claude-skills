@@ -107,7 +107,7 @@ Sonnet 4.5 · Claude Pro
      # {{TIMELINE_TITLE}}
      {{TIMELINE_OVERVIEW_TEXT}}
      `[Run the {{TIMELINE_TITLE}}](./main.html)`
-     `[View the Raw Timeline Data](timeline.json)
+     `View the Raw Timeline Data`
      ## Overview
      … +109 lines (ctrl+o to expand)
 

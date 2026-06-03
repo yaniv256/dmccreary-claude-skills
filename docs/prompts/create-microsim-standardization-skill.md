@@ -18,7 +18,7 @@
     to your website:"
     6. Check that there is a metadata.json file with Dublin core data in the file
     7. Validate the metadata.json file with the microsim schema in the assets of the skill
-    8. Make sure there is a [Run in fullscreen](main.html){ .md-button .md-button--primary } after the 
+    8. Make sure there is a `Run in fullscreen` after the 
     iframe example
     9. If the MicroSim is a p5.js MicroSim, check if there is a link such as [Edit in the p5.js 
     Editor](https://editor.p5js.org/dmccreary/sketches/P5_ID) link, if the link does not exist, prompt 

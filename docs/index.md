@@ -26,7 +26,7 @@ There are three key section.
 
 1. [Getting Started](./getting-started.md) - This section describes how to install these skills on a Mac, Windows or UNIX system including how to install a skill for all your projects or just a single project.
 2. [Chapters](./chapters/index.md) - 13 chapters about using skills to create intelligent textbooks
-2. [List of Skills](./list-of-skills.md) - This is a list of the skills we have created to support
+2. [List of Skills](./skill-descriptions/index.md) - This is a list of the skills we have created to support
 intelligent textbooks.  It includes skills for things such as:
 
     1. Setting up a book structure on GitHub
