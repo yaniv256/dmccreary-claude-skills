@@ -67,6 +67,7 @@ Book Installer Features (most → least common):
 36. About page - professional about.md with motivation, author bio, and citations
 37. Slide generator - install slide-viewer MicroSim and generate slides.md decks for chapters
 38. Reading level analysis - Flesch-Kincaid grade level report for all chapters
+39. Generate all supplementary content - glossary, FAQ, per-chapter quizzes & references, book metrics, diagram reports, about page, landing page, README
 
 Type a number or feature name to install.
 
@@ -133,6 +134,7 @@ Match the user's request to the appropriate installation guide:
 | about page, about, about.md, about this book, author bio, cite this book, citation, 36 | `references/about-page.md` | Generate professional about page with motivation, bio, and citations |
 | slide generator, slides, slide deck, slide viewer, presentation, generate slides, install slide viewer, 37 | `references/slide-generator.md` | Install the slide-viewer MicroSim and generate slides.md decks for chapters |
 | reading level, readability, flesch kincaid, grade level, reading analysis, 38 | `references/reading-level-analysis.md` | Analyze chapter reading level consistency |
+| generate all supplementary content, supplementary content, complete the book, finish the book, book completion, generate glossary faq quiz, generate all content, all supplementary, 39 | `references/supplementary-content-generator.md` | Generate glossary, FAQ, per-chapter quizzes & references, book metrics, diagram reports, about page, landing page, and README in one coordinated workflow |
 
 ### Decision Tree
 
@@ -194,6 +196,9 @@ Want to install a slide viewer and generate slide decks for chapters?
 
 Want to analyze reading level consistency across chapters?
   → YES: reading-level-analysis.md
+
+Want to generate all supplementary content in one pass (glossary, FAQ, per-chapter quizzes & references, book metrics, diagram reports, about page, landing page, README)?
+  → YES: supplementary-content-generator.md
 
 Want to add a specific feature (equations, quizzes, feedback, etc.)?
   → YES: mkdocs-features.md (then follow specific feature instructions)
@@ -482,6 +487,30 @@ See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textb
 - `project` scope on the GitHub token (`gh auth refresh -s project`)
 - Existing MkDocs project with mkdocs.yml
 
+### supplementary-content-generator.md
+
+**Purpose:** Generate all standard supplementary content for an intelligent textbook in a single coordinated workflow
+
+**Produces:**
+- `docs/about.md` — professional about page (via `about-page.md` reference)
+- `docs/index.md` — main landing page (via `home-page-template.md` reference, if stub or missing)
+- `README.md` — GitHub-facing README (via `readme-generator` skill)
+- `docs/glossary.md` — ISO 11179-compliant glossary (via `glossary-generator` skill)
+- `docs/faq.md` — ≥ 30-question FAQ (via `faq-generator` skill)
+- `docs/chapters/*/quiz.md` — per-chapter quizzes (via `quiz-generator` skill)
+- `docs/chapters/*/references.md` — per-chapter reference lists (via `reference-generator` skill)
+- Book metrics report (via `bk-generate-book-metrics` script)
+- Diagram reports (via `bk-diagram-reports` script)
+- Updated `mkdocs.yml` nav entries for all generated files
+
+**Execution order:** about → landing page → README → glossary → FAQ → quizzes → references → metrics → diagram reports → nav update → verification
+
+**Prerequisites:**
+- Existing MkDocs project with `mkdocs.yml`
+- `docs/course-description.md` present
+- `docs/learning-graph/learning-graph.json` present
+- At least one chapter under `docs/chapters/`
+
 ### slide-generator.md
 
 **Purpose:** Install the slide-viewer MicroSim into an intelligent textbook project and generate presentation-style `slides.md` decks for specified chapters
@@ -615,6 +644,11 @@ See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textb
 **Routing:** Keywords "social media preview", "og:image", "bk-check-social-cover", "social hook" → `references/social-media-preview.md`
 **Action:** Read social-media-preview.md, create `plugins/social_override.py` at the project root with the exact code in the reference, add a top-level `hooks: - plugins/social_override.py` block to `mkdocs.yml`, run `mkdocs build`, verify the nine og:* / twitter:* meta tags appear in `site/index.html`, then run `bk-check-social-cover` against either the deployed URL or a local server staging the build under `/<project>/`
 
+### Example 17: Generate All Supplementary Content
+**User:** "generate all supplementary content" or "complete the book" or "39"
+**Routing:** Keywords "supplementary content", "complete the book", "39" → `references/supplementary-content-generator.md`
+**Action:** Read supplementary-content-generator.md. First inventory existing files. Then execute Steps 2–12 in order: generate about page, landing page, README, glossary, FAQ, per-chapter quizzes and references, run `bk-generate-book-metrics` and `bk-diagram-reports`, update mkdocs.yml nav, and run the verification bash check. Report which files were created, skipped, or missing.
+
 ### Example 16: Install Slide Viewer and Generate Chapter Slides
 **User:** "install the slide viewer and make slides for chapters 1 and 2" or "generate slides for chapter 3"
 **Routing:** Keywords "slide", "slides", "slide viewer", "generate slides", "slide deck" → `references/slide-generator.md`
@@ -630,6 +664,7 @@ For a complete new project, users typically run these installations in order:
 4. `social-media-preview.md` - Install the og:* / twitter:* meta-tag hook (verify with `bk-check-social-cover`)
 5. `learning-graph-viewer.md` - Add graph visualization (after learning graph exists)
 6. `skill-tracker.md` - Enable usage analytics (optional)
+7. `supplementary-content-generator.md` - Generate all supplementary content once chapters exist (glossary, FAQ, quizzes, references, metrics, about, README)
 
 ### Verification Commands
 
