@@ -272,7 +272,7 @@ Sonnet 4.5 · Claude Pro
         12 +  Guide the creation of intelligent textbooks using MkDocs with Material 
            + theme, learning graphs, MicroSims, and AI-assisted content generation 
            + workflows supporting Level 2-5 intelligence frameworks.
-        13 +  `[Read full description](./intelligent-textbook-creator.md)
+        13 +  `[Read full description]
         14    
         15 -  Create a high-quality course description tha follows the 2001 Bloom 
            - Taxonomy guidelines.
@@ -290,16 +290,16 @@ Sonnet 4.5 · Claude Pro
         18 +  Create, validate, and score course descriptions following the 2001 
            + Bloom's Taxonomy guidelines with quality assessment (1-100) and 
            + improvement suggestions.
-        19 +  `[Read full description](./course-description-analyzer.md)
+        19 +  `[Read full description]
         20    
-        21 -  `[Detailed Description](./couse-description-analizer.md)
+        21 -  `[Detailed Description]
         21 +  ### Learning Graph Generator
         22 +  Generate comprehensive learning graphs with 200 concepts showing 
            + prerequisite dependencies as directed acyclic graphs (DAGs) with taxonomy
            +  categorization and quality validation.
         23 +  `[Read full description](./learning-graph-generator.md)
         24    
-        25 -  `[Sample Skill Execution Log](./prompts/course-description-skill.md)
+        25 -  `[Sample Skill Execution Log]
         25 +  ## Content Generation Skills
         26    
         27 -  ## Generating a Learning Graph
@@ -323,14 +323,14 @@ Sonnet 4.5 · Claude Pro
         36 +  Automatically generate comprehensive glossaries from learning graph 
            + concept lists with ISO 11179-compliant definitions that are precise, 
            + concise, distinct, non-circular, and free of business rules.
-        37 +  `[Read full description](./glossary-generator.md)
+        37 +  `[Read full description]
         38    
         39 -  ## Generating Chapter Content
         39 +  ### FAQ Generator
         40 +  Generate comprehensive Frequently Asked Questions from course content, 
            + learning graphs, concept lists, MicroSims, and glossary terms to prepare 
            + content for chatbot integration.
-        41 +  `[Read full description](./faq-generator.md)
+        41 +  `[Read full description]
         42    
         43 -  TODO
         43 +  ### Reference Generator
@@ -348,7 +348,7 @@ Sonnet 4.5 · Claude Pro
         50 +  Generate interactive multiple-choice quizzes aligned to learning graph 
            + concepts and distributed across Bloom's Taxonomy cognitive levels with 
            + quality distractors and comprehensive explanations.
-        51 +  `[Read full description](./quiz-generator.md)
+        51 +  `[Read full description]
         52    
         53 -  ## Generating interactive info-graphics
         53 +  ## Visualization Skills
@@ -358,14 +358,14 @@ Sonnet 4.5 · Claude Pro
         56 +  Create interactive educational MicroSims using the p5.js JavaScript 
            + library with distinct drawing and control regions for browser-based 
            + learning simulations.
-        57 +  `[Read full description](./microsim-p5.md)
+        57 +  `[Read full description]
         58    
         59 -  ## Generating MicroSims
         59 +  ### Mermaid Diagram Generator
         60 +  Generate interactive workflow diagrams using Mermaid.js for flowcharts, 
            + process diagrams, decision trees, and algorithm visualizations with 
            + colorful backgrounds and 16-point fonts.
-        61 +  `[Read full description](./mermaid-generator.md)
+        61 +  `[Read full description]
         62    
         63 -  This simulation creates an interactive simulation using the powerful 
            - p5.js JavaScript library.
@@ -375,7 +375,7 @@ Sonnet 4.5 · Claude Pro
            +  data analysis.
         65 +  `[Read full description](./bubble-chart-generator.md)
         66    
-        67 -  `[Read about the P5 MicroSim Generator](./microsim-p5.md)
+        67 -  `[Read about the P5 MicroSim Generator]
         67 +  ### Timeline Generator
         68 +  Generate interactive timeline visualizations using vis-timeline.js for 
            + historical timelines, project schedules, event sequences, and 
@@ -387,7 +387,7 @@ Sonnet 4.5 · Claude Pro
         72 +  Create interactive Venn diagram visualizations using venn.js with 
            + educational tooltips (not size values) that integrate with glossary 
            + definitions for consistent learning experiences.
-        73 +  `[Read full description](./venn-diagram-generator.md)
+        73 +  `[Read full description]
         74    
         75 -  Having a detailed glossary of terms is critical for high-quality 
            - textbooks.
@@ -397,7 +397,7 @@ Sonnet 4.5 · Claude Pro
            + dependencies, and relationship-based data.
         77 +  `[Read full description](./vis-network.md)
         78    
-        79 -  `[Read about the Glossary Generator](./glossary-generator.md)
+        79 -  `[Read about the Glossary Generator]
         79 +  ## Utility Skills
         80    
         81 -  ## Generating FAQs
@@ -407,7 +407,7 @@ Sonnet 4.5 · Claude Pro
            + capabilities for exploring concept dependencies.
         83 +  `[Read full description](./install-learning-graph-viewer.md)
         84    
-        85 -  `[FAQ Generator](./faq-generator.md)
+        85 -  `[FAQ Generator]
         85 +  ## Hardware/Physical Computing Skills
         86    
         87 -  ## Generating Quizzes and Assessments
@@ -417,7 +417,7 @@ Sonnet 4.5 · Claude Pro
            +  hands-on learning.
         89 +  `[Read full description](./moving-rainbow.md)
         90    
-        91 -  `[Quiz Generator](./quiz-generator.md)
+        91 -  `[Quiz Generator]
         91 +  ## Educational Framework
         92    
         93 -  ## Adding experience API (xAPI) to your interactive elements
@@ -772,7 +772,7 @@ Sonnet 4.5 · Claude Pro
        177 +  
        178 +  - `[Learning Graph Generator](./learning-graph-generator.md)
        179 +  - `[Chapter Content Generator](./chapter-content-generator.md)
-       180 +  - `[Course Description Analyzer](./course-description-analyzer.md)
+       180 +  - `[Course Description Analyzer]
 
 ⏺ Bash(ls -1 docs/skill-descriptions/*.md | wc -l)
   ⎿  19
