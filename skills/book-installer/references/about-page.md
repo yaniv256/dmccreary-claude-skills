@@ -73,7 +73,7 @@ If the project has a mascot (`docs/img/mascot/welcome.png` exists), add a welcom
 ## Welcome from {{MASCOT_NAME}}
 
 !!! mascot-welcome "Welcome!"
-    ![{{MASCOT_NAME}} waving welcome](./img/mascot/welcome.png){ .mascot-admonition-img }
+    ![{{MASCOT_NAME}} waving welcome](../img/mascot/welcome.png){ class="mascot-admonition-img" }
     {{MASCOT_WELCOME_TEXT — in character, 3-5 sentences, warm and encouraging,
     references the subject matter, ends with the mascot's catchphrase if it has one.}}
 ```
