@@ -75,19 +75,19 @@ For Python script utilities, run the script directly:
 
 **TODO JSON extractor:**
 ```bash
-python /path/to/skills/microsim-utils/scripts/create-microsim-todo-json-files.py --project-dir /path/to/project
+python3 /path/to/skills/microsim-utils/scripts/create-microsim-todo-json-files.py --project-dir /path/to/project
 ```
 Report the summary output to the user (chapters scanned, total specs found, already implemented, TODO files written, output directory).
 
 **Scaffold from TODO JSON:**
 ```bash
-python /path/to/skills/microsim-utils/scripts/scaffold-microsims-from-todo.py --project-dir /path/to/project
+python3 /path/to/skills/microsim-utils/scripts/scaffold-microsims-from-todo.py --project-dir /path/to/project
 ```
 Report the summary output to the user (TODO specs processed, scaffolded, skipped). Use `--force` only if the user explicitly asks to regenerate stubs; the script never overwrites an existing `main.html` regardless of `--force`.
 
 **Iframe height sync:**
 ```bash
-python /path/to/skills/microsim-utils/scripts/sync-iframe-heights.py --project-dir /path/to/project --verbose
+python3 /path/to/skills/microsim-utils/scripts/sync-iframe-heights.py --project-dir /path/to/project --verbose
 ```
 Report the summary output to the user (sims synced, CANVAS_HEIGHT comments inserted, iframe heights updated).
 
@@ -258,17 +258,17 @@ message participates automatically.
 ### Example 4: Create TODO JSON Files
 **User:** "Create MicroSim TODO JSON files"
 **Routing:** Keywords "TODO", "create microsim todo" → `scripts/create-microsim-todo-json-files.py`
-**Action:** Run `python scripts/create-microsim-todo-json-files.py --project-dir /path/to/project` and report results (chapters scanned, specs found, already implemented, TODO files written)
+**Action:** Run `python3 scripts/create-microsim-todo-json-files.py --project-dir /path/to/project` and report results (chapters scanned, specs found, already implemented, TODO files written)
 
 ### Example 5: Scaffold MicroSims from TODO JSON
 **User:** "scaffold the microsims" or "create the stub files for the TODO sims" or "generate scaffold files from the JSON specs"
 **Routing:** Keywords "scaffold microsims", "stub out microsims", "scaffold from todo" → `scripts/scaffold-microsims-from-todo.py`
-**Action:** Run `python scripts/scaffold-microsims-from-todo.py --project-dir /path/to/project` and report results (TODO specs processed, scaffolded, skipped). Typically follows immediately after `create-microsim-todo-json-files.py`.
+**Action:** Run `python3 scripts/scaffold-microsims-from-todo.py --project-dir /path/to/project` and report results (TODO specs processed, scaffolded, skipped). Typically follows immediately after `create-microsim-todo-json-files.py`.
 
 ### Example 6: Fix Iframe Heights
 **User:** "fix the iframe heights" or "sync the iframe heights" or "correct the iframe heights"
 **Routing:** Keywords "fix iframe heights", "sync iframe heights", "correct iframe heights" → `scripts/sync-iframe-heights.py`
-**Action:** Run `python scripts/sync-iframe-heights.py --project-dir /path/to/project --verbose` and report results (sims synced, comments inserted, iframe heights updated)
+**Action:** Run `python3 scripts/sync-iframe-heights.py --project-dir /path/to/project --verbose` and report results (sims synced, comments inserted, iframe heights updated)
 
 ### Example 7: Set Up Iframe Auto-Resize
 **User:** "make the iframes auto-size" or "set up iframe auto height" or "I want microsims to report their own height"
