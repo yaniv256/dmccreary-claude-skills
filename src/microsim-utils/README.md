@@ -13,6 +13,7 @@ These utilities eliminate repetitive work when batch-generating MicroSims:
 | `extract-sim-specs.py` | Parse specs from chapter markdown | ~80K |
 | `generate-sim-scaffold.py` | Create main.html / index.md / metadata.json | ~150K |
 | `update-mkdocs-nav.py` | Regenerate MicroSims nav section | ~100K |
+| `generate-sims-index.py` | Build the `docs/sims/index.md` thumbnail gallery | ~40K |
 | `add-iframes-to-chapter.py` | Insert missing iframes + fix heights/paths | ~50K |
 | `validate-sims.py` | 100-point quality rubric scoring | ~50K |
 
@@ -92,6 +93,22 @@ python3 update-mkdocs-nav.py --project-dir /path/to/project --dry-run --verbose
 
 # Apply
 python3 update-mkdocs-nav.py --project-dir /path/to/project
+```
+
+### generate-sims-index.py
+
+Build the MicroSims gallery page at `docs/sims/index.md` — a responsive grid of
+thumbnail cards, one per sim, each linking to the sim and showing its `.png`
+screenshot (sims without a screenshot get a "no preview" placeholder). Titles
+come from frontmatter `title` > first `# Heading` > directory name. The
+gallery counterpart to `update-mkdocs-nav.py`; run both after a batch.
+
+```bash
+# Preview
+python3 generate-sims-index.py --project-dir /path/to/project --dry-run --verbose
+
+# Apply
+python3 generate-sims-index.py --project-dir /path/to/project
 ```
 
 ### add-iframes-to-chapter.py
