@@ -46,11 +46,12 @@ ABS_PATH_RE = re.compile(r'src=["\'](/sims/([^/"\']+)/main\.html)["\']', re.IGNO
 def _infer_sim_id(title, details_text=""):
     """Infer sim_id from title or details block content."""
     # Check for explicit "Directory name:" field
-    m = re.search(r"Directory name:\s*(\S+)", details_text, re.IGNORECASE)
+    # Capture only id-safe characters so trailing markup like <br/> is excluded
+    m = re.search(r"Directory name:\s*([A-Za-z0-9_-]+)", details_text, re.IGNORECASE)
     if m:
         return m.group(1).strip()
     # Check for sim-id field
-    m = re.search(r"\*\*sim-id:\*\*\s*(\S+)", details_text, re.IGNORECASE)
+    m = re.search(r"\*\*sim-id:\*\*\s*([A-Za-z0-9_-]+)", details_text, re.IGNORECASE)
     if m:
         return m.group(1).strip()
     return kebab_case(title)
