@@ -5,7 +5,7 @@ description: This skill generates comprehensive chapter content for intelligent 
 
 # Chapter Content Generator
 
-**Version:** 0.08
+**Version:** 0.09
 
 ## Overview
 
