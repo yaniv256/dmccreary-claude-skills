@@ -31,10 +31,10 @@ Use this guide when:
 
 3. **Script** available at:
    ```
-   {claude-skills-path}/skills/book-installer/scripts/generate-favicon.py
+   ~/.claude/skills/book-installer/scripts/generate-favicon.py
    ```
-   where `{claude-skills-path}` is usually `~/.claude/skills/claude-skills`
-   or the symlinked path your project uses.
+   (The `~/.claude/skills/` directory is the symlink to the claude-skills repo;
+   no extra `claude-skills/skills/` prefix is needed.)
 
 ## Step 1: Verify the Source Image Exists
 
@@ -50,7 +50,7 @@ If the file is missing, ask the user to generate the mascot first using the
 From the **project root** (the directory containing `mkdocs.yml`):
 
 ```bash
-python ~/.claude/skills/claude-skills/skills/book-installer/scripts/generate-favicon.py
+python3 ~/.claude/skills/book-installer/scripts/generate-favicon.py
 ```
 
 This uses all defaults:

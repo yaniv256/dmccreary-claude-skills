@@ -1,6 +1,9 @@
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Most of these skills have also been tested in OpenAI Codex, Google Gemini, Cursor, Perplexity, and Hermes and have been shown to work if the CLAUDE.md file is copied to the AGENTS.md file.
+Note that the skills that use image understanding to understand MicroSim layout errors
+do not work well on non-Claude systems.
 
 ## Project Overview
 
