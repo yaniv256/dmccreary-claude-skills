@@ -28,27 +28,58 @@ Do NOT use this skill when:
 - The content is a pure simulation with dynamic elements (use microsim-generator instead)
 - The diagram needs only simple inline markdown images with no interactivity
 
+## Overlay Types: Callout vs. Grid
+
+This skill supports **two distinct overlay engines** depending on the infographic type:
+
+| Engine | Use When | Files |
+|--------|----------|-------|
+| **Callout** (`diagram.js` + `style.css`) | Scientific illustrations with numbered point markers on specific structures (anatomy, cell diagrams, labeled components) | `main-template.html`, `data-json-schema.md` |
+| **Grid** (`grid-diagram.js` + `grid-overlay.css`) | Comparison infographics or posters with large rectangular column/region zones (side-by-side comparisons, poster sections) | `grid-main-template.html`, `grid-data-json-schema.md` |
+
+**Key differences:**
+- Callout uses `callouts[]` with `x`, `y` point coordinates and draws numbered circle markers with leader lines
+- Grid uses `zones[]` with `x1`, `y1`, `x2`, `y2` rectangle coordinates and draws transparent hover rectangles over columns/regions
+- Grid supports `showLabels: true/false` to control whether a chip label appears inside each zone (set to `false` when the image already has printed column titles)
+
 ## Prerequisites
 
-The project must have the shared diagram library installed:
+The project must have the shared overlay libraries installed:
 
 ```
 docs/sims/shared-libs/
-├── diagram.js    (interactive overlay engine)
-└── style.css     (shared styles for all diagram MicroSims)
+├── diagram.js          (callout overlay engine — point markers)
+├── style.css           (callout overlay styles)
+├── grid-diagram.js     (grid overlay engine — rectangular zones)
+└── grid-overlay.css    (grid overlay styles)
 ```
 
-If `shared-libs/` does not exist, install it from this skill's bundled assets:
+To install all four files from this skill's bundled assets:
 
 ```bash
 mkdir -p docs/sims/shared-libs
 cp ~/.claude/skills/interactive-infographic-overlay/assets/shared-libs/diagram.js docs/sims/shared-libs/
 cp ~/.claude/skills/interactive-infographic-overlay/assets/shared-libs/style.css docs/sims/shared-libs/
+cp ~/.claude/skills/interactive-infographic-overlay/assets/shared-libs/grid-diagram.js docs/sims/shared-libs/
+cp ~/.claude/skills/interactive-infographic-overlay/assets/shared-libs/grid-overlay.css docs/sims/shared-libs/
 ```
 
 Always check that the project's copy is up to date with the skill's bundled version before creating new diagram MicroSims.
 
 ## Workflow
+
+### Choosing the Overlay Type
+
+Before generating files, decide which engine to use:
+
+- **Use Callout** when the diagram is a scientific illustration (anatomy, hardware internals, botanical diagrams, labeled components) where small numbered markers should point to specific structures
+- **Use Grid** when the infographic is a comparison poster or section-based layout (3-column technology comparison, side-by-side concept contrasts, poster regions) where large rectangular hover zones make more sense
+
+The two workflows below share the same Steps 1, 2, 6, 7, 8 but differ in Steps 3–5.
+
+---
+
+## Callout Overlay Workflow (diagram.js)
 
 ### Step 1: Gather Diagram Requirements
 
@@ -128,6 +159,81 @@ Report all files created and provide next steps:
 3. View at `http://127.0.0.1:8000/{repo}/sims/{sim-id}/main.html`
 4. Calibrate positions with `?edit=true`
 5. Copy calibrated JSON back into data.json
+
+---
+
+## Grid Overlay Workflow (grid-diagram.js)
+
+Use this workflow when the infographic is a comparison poster or section-based layout.
+
+### Grid Step 1: Gather Zone Requirements
+
+Extract from the chapter content specification or user request:
+
+1. **Subject** — What the infographic compares (e.g., "digital vs. analog signals", "textbook intelligence levels", "three sorting algorithms")
+2. **Zones** — List of 2–6 rectangular regions with:
+   - `id` (kebab-case, unique)
+   - `label` (display name)
+   - `color` (hex)
+   - Approximate percentage boundaries (`x1`, `y1`, `x2`, `y2`)
+   - One-line `summary`
+   - 3–6 bullet `facts`
+3. **Image style** — Flat infographic, comparison poster, data visualization
+4. **Image dimensions** — Typically 900×600 (landscape) or 1200×800
+5. **showLabels** — `false` if the image has printed column titles (default); `true` only if the image has no titles
+
+### Grid Step 2: Create the MicroSim Directory
+
+```bash
+mkdir -p docs/sims/{sim-id}
+```
+
+### Grid Step 3: Generate image-prompt.md
+
+Use `references/image-prompt-template.md` with these extra rules for comparison posters:
+
+1. **Columns/regions must have visible titles** in the image (the chip labels are hidden by default for grid overlays). Each column should have a bold, legible header text built into the illustration.
+2. **No interactive callout marks** — no numbers, arrows, or overlaid text annotations (same as callout type)
+3. Each region should have a **distinct color scheme** matching the intended zone color
+4. Describe exact pixel regions or percentage positions so zone boundaries in data.json can be estimated accurately
+
+### Grid Step 4: Generate data.json
+
+Create `docs/sims/{sim-id}/data.json` using the schema in `references/grid-data-json-schema.md`.
+
+Zone position guidelines:
+- Start by estimating zone boundaries from the image description (percentage of image width/height)
+- Use `?edit=true` to drag corner handles and calibrate after the image is generated
+- For a standard 3-column landscape poster, typical zone boundaries are:
+  - Column 1: `x1: 2, y1: 12, x2: 32, y2: 90`
+  - Column 2: `x1: 35, y1: 12, x2: 65, y2: 90`
+  - Column 3: `x1: 68, y1: 12, x2: 98, y2: 90`
+
+### Grid Step 5: Generate main.html
+
+Use `assets/grid-main-template.html`. Replace `{TITLE}` and `{PROMPT_TEXT}` (the click-to-explore instruction). The image and zones are injected by `grid-diagram.js` — there is no `<img>` tag in the template.
+
+Link to `grid-overlay.css` and `grid-diagram.js`:
+
+```html
+<link rel="stylesheet" href="../shared-libs/grid-overlay.css">
+...
+<script src="../shared-libs/grid-diagram.js"></script>
+```
+
+### Grid Step 6–8
+
+Follow the same steps as the Callout workflow (Step 6: index.md, Step 7: mkdocs.yml, Step 8: Inform user).
+
+### Grid Edit Mode
+
+Same as callout edit mode but uses **draggable corner handles** instead of draggable marker circles:
+1. Open `main.html?edit=true`
+2. Drag the four corner handles of each zone to calibrate the rectangle
+3. Click "Copy JSON" to get updated coordinates
+4. Replace the `zones` array in `data.json`
+
+---
 
 ## Calibration Workflow
 
@@ -253,11 +359,26 @@ appear in exactly one place. Guard against the two ways it gets duplicated:
 
 ### references/
 
-- `data-json-schema.md` — Complete data.json schema with field definitions and examples
-- `image-prompt-template.md` — Template for generating image prompts
+- `data-json-schema.md` — Callout overlay data.json schema (point markers, `callouts[]` array)
+- `grid-data-json-schema.md` — Grid overlay data.json schema (rectangular zones, `zones[]` array)
+- `image-prompt-template.md` — Template for generating annotation-free image prompts
 
 ### assets/
 
-- `main-template.html` — HTML template for main.html with placeholder variables
-- `shared-libs/diagram.js` — Interactive diagram overlay engine (explore, quiz, edit modes)
-- `shared-libs/style.css` — Shared styles for all diagram MicroSims
+- `main-template.html` — HTML template for callout overlay MicroSims (uses `diagram.js`)
+- `grid-main-template.html` — HTML template for grid overlay MicroSims (uses `grid-diagram.js`)
+- `shared-libs/diagram.js` — Callout overlay engine: numbered point markers, leader lines, explore/quiz/edit modes
+- `shared-libs/style.css` — Styles for callout overlay MicroSims
+- `shared-libs/grid-diagram.js` — Grid overlay engine: rectangular hover zones, explore/quiz/edit modes
+- `shared-libs/grid-overlay.css` — Styles for grid overlay MicroSims
+
+### Test Case
+
+A working grid overlay test is available at `docs/sims/grid-overlay-test/` in the claude-skills repo:
+
+- `test-image.svg` — SVG comparison infographic (3 columns: Static vs. Interactive vs. Adaptive)
+- `data.json` — 3 zones + 3 quiz questions
+- `main.html` — Uses `grid-diagram.js` and `grid-overlay.css`
+- `index.md` — MkDocs page with embedded iframe
+
+Preview at: `http://127.0.0.1:8000/claude-skills/sims/grid-overlay-test/`
