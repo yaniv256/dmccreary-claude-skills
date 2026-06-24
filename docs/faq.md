@@ -88,7 +88,7 @@ The focus is on **using** these tools through Claude Skills rather than writing 
 There are two ways to list your installed skills:
 
 1. **Ask Claude directly**: Type "What skills do you know about? Check the ~/.claude/skills/ area."
-2. **Use the /skills slash command**: Install the custom `/skills` command by running the `install-skills-command.sh` script, then type `/skills` in Claude Code
+2. **Use the /skills slash command**: Install the custom `/skills` command by running `bk-install-skills` (which symlinks all slash commands into `~/.claude/commands/`), then type `/skills` in Claude Code
 
 The slash command provides formatted output organized by category, showing all user and project-specific skills.
 

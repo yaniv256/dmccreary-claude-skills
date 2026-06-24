@@ -99,9 +99,11 @@ symlink for consistency.
   multi-loop *articles*; the guide is for single embedded diagrams.
 - **`concept-classifier` → p5 sub-guide** — possible future merge to free
   another slot; deferred (slot pressure relieved at 26/30).
-- **`install-skills-command.sh`** — now redundant with the generalized command
-  logic in `bk-install-skills`; candidate for deprecation/retirement (flagged to
-  user, awaiting decision).
+- **`install-skills-command.sh`** — ✅ **removed** (redundant with the
+  generalized command logic in `bk-install-skills`; its `list-skills.sh` copy
+  was already dead, pointing at a nonexistent `scripts/list-skills.sh`).
+  References in `docs/getting-started.md` and `docs/faq.md` were repointed to
+  `bk-install-skills`.
 
 ## 6. Commits this session
 

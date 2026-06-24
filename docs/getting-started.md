@@ -373,17 +373,17 @@ The custom slash command system works by:
 
 The `list-skills.sh` script provides this functionality and is automatically installed to `~/.local/bin` when you run `bk-install-scripts`.
 
-To enable the `/skills` slash command:
+To enable the `/skills` (and `/ibook`) slash commands:
 
 **Option 1: Install globally (recommended):**
 ```sh
-cd $BK_HOME/scripts
-./install-skills-command.sh
+bk-install-skills
 ```
 
-This will:
-- Copy `list-skills.sh` to `~/.local/bin/` (if not already installed by bk-install-scripts)
-- Copy `commands/skills.md` to `~/.claude/commands/skills.md`
+In addition to symlinking every skill into `~/.claude/skills/`, this symlinks
+every command in `commands/*.md` into `~/.claude/commands/` — so `/skills`,
+`/ibook`, and any future command become available globally. (The `list-skills.sh`
+helper used by `/skills` is installed separately by `bk-install-scripts`.)
 
 **Option 2: Install for a specific project:**
 ```sh
@@ -517,7 +517,7 @@ If the `/skills` slash command doesn't work:
 
 1. Check that `list-skills.sh` is in your PATH: `which list-skills.sh`
 2. Check that the command file exists: `ls ~/.claude/commands/skills.md`
-3. Re-run: `cd $BK_HOME/scripts && ./install-skills-command.sh`
+3. Re-run: `bk-install-skills`
 4. Restart Claude Code
 
 ### Permission denied when running scripts
