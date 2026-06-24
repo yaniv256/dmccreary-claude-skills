@@ -169,6 +169,69 @@ else
     echo -e "${GREEN}✓${NC} No broken symlinks found"
 fi
 
+# ── Slash-command symlinks ────────────────────────────────────
+# Symlink every commands/*.md into ~/.claude/commands/ so slash commands
+# (e.g. /skills, /ibook) are usable globally. Mirrors the skills logic:
+# replace existing symlinks, warn+skip real files, skip archived *-old.md.
+echo ""
+echo -e "${BLUE}════════════════════════════════════════════════════════════════${NC}"
+echo -e "${BLUE}Installing slash-command symlinks...${NC}"
+COMMANDS_DIR="$BK_HOME/commands"
+COMMANDS_TARGET="$HOME/.claude/commands"
+
+if [ -d "$COMMANDS_DIR" ]; then
+    mkdir -p "$COMMANDS_TARGET"
+
+    # Clean up stale command symlinks whose source no longer exists
+    shopt -s nullglob
+    for link in "$COMMANDS_TARGET"/*.md; do
+        if [ -L "$link" ]; then
+            link_target=$(readlink "$link")
+            if [[ "$link_target" == "$COMMANDS_DIR"* ]] && [ ! -e "$link" ]; then
+                rm "$link"
+                echo -e "${YELLOW}Cleaned stale command link:${NC} $(basename "$link")"
+            fi
+        fi
+    done
+    shopt -u nullglob
+
+    cmd_count=0
+    declare -a installed_cmds=()
+    shopt -s nullglob
+    for cmd_file in "$COMMANDS_DIR"/*.md; do
+        cmd_name=$(basename "$cmd_file")
+
+        # Skip archived/legacy commands (e.g. skills-old.md) so they
+        # do not show up as live slash commands.
+        case "$cmd_name" in
+            *-old.md) continue ;;
+        esac
+
+        target_cmd="$COMMANDS_TARGET/$cmd_name"
+
+        if [ -L "$target_cmd" ]; then
+            rm "$target_cmd"
+        elif [ -e "$target_cmd" ]; then
+            echo -e "${YELLOW}⚠${NC}  Warning: $target_cmd exists but is not a symlink. Skipping."
+            continue
+        fi
+
+        ln -s "$cmd_file" "$target_cmd"
+        echo -e "${GREEN}✓${NC} /${cmd_name%.md} -> $cmd_file"
+        installed_cmds+=("/${cmd_name%.md}")
+        ((++cmd_count))
+    done
+    shopt -u nullglob
+
+    if [ "$cmd_count" -gt 0 ]; then
+        echo -e "${GREEN}Installed $cmd_count command link(s):${NC} ${installed_cmds[*]}"
+    else
+        echo -e "${YELLOW}No command links created${NC}"
+    fi
+else
+    echo -e "${YELLOW}⚠${NC}  $COMMANDS_DIR not found, skipping command symlinks"
+fi
+
 # ── Global gitignore ──────────────────────────────────────────
 echo ""
 echo -e "${BLUE}Configuring global gitignore...${NC}"
