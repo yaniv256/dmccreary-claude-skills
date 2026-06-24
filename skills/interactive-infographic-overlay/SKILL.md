@@ -1,6 +1,8 @@
 ---
 name: interactive-infographic-overlay
 description: Generates an interactive diagram MicroSim with numbered callout markers or rectangular zones over a scientific illustration, supporting explore, quiz, and edit modes. Use for anatomy diagrams, labeled components, or comparison posters needing interactive annotations.
+model: sonnet
+license: 
 ---
 # Interactive Infographic Overlay Generator
 

@@ -1,6 +1,8 @@
 ---
 name: diagram-reports-generator
 description: Generates a status report of all diagrams and MicroSims across an intelligent textbook's chapters, including difficulty, Bloom's level, and UI complexity. Use to audit visualization coverage before a content review.
+model: haiku
+license: 
 ---
 
 # Diagram Reports Generator

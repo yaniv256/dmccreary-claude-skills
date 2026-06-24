@@ -1,6 +1,8 @@
 ---
 name: concept-classifier
 description: Creates a p5.js MicroSim where students read scenarios and sort them into the correct category. Use for any subject where learners need to recognize patterns, identify types, or categorize examples.
+model: sonnet
+license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
 ---
 
 # Concept Classifier Quiz MicroSim Skill

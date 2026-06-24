@@ -1,7 +1,8 @@
 ---
 name: quiz-generator
 description: Generates multiple-choice quiz questions for each chapter, aligned to the learning graph and distributed across Bloom's Taxonomy levels. Use after chapter content and the learning graph both exist.
-license: MIT
+license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+model: sonnet
 ---
 
 # Quiz Generator for Intelligent Textbooks

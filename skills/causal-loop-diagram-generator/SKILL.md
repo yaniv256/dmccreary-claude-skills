@@ -2,6 +2,7 @@
 name: causal-loop-diagram-generator
 description: Creates interactive causal-loop diagram (CLD) articles for MkDocs Material sites. Use when the user wants to visualize feedback loops, systems archetypes (reinforcing/balancing loops, limits to growth, tragedy of the commons), or any topic with competing runaway and stabilizing dynamics. Produces vis-network diagrams — not static images or Mermaid.
 model: sonnet
+license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
 ---
 
 # Causal Loop Diagram Generator

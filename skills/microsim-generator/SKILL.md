@@ -1,6 +1,7 @@
 ---
 name: microsim-generator
 description: Creates interactive educational MicroSims using the best-matched JavaScript library (p5.js, Chart.js, Plotly, Mermaid, vis-network, vis-timeline, Leaflet, Venn.js). Analyzes user requirements to route to the appropriate visualization type and generates complete MicroSim packages with HTML, JavaScript, CSS, documentation, screen capture, and metadata.
+model: opus
 ---
 
 # MicroSim Generator
