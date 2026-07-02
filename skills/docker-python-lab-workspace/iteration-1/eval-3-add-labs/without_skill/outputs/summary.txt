@@ -1,0 +1,32 @@
+Task: Add Lab 2 (recursive factorial) and Lab 3 (default arguments) to the existing
+24-functions-docker.md page, which already contained Lab 1 (defining a function).
+
+Approach
+--------
+- Preserved Lab 1 exactly as given (no edits to existing markup).
+- Added Lab 2 immediately after Lab 1, following the same HTML structure:
+    div#docker-lab-N > div#docker-editor-N > textarea#docker-code-N
+    div#docker-buttons-N with Run and Reset buttons
+    pre#docker-output-N
+  All numeric suffixes incremented to 2.
+- Added Lab 3 with suffix 3, same structure.
+
+Lab 2 — Recursive Factorial
+  Code: defines factorial(n) with a base case (n==0 or n==1 → 1) and the
+  recursive step (n * factorial(n-1)). A for-loop prints 0! through 5! so
+  learners see multiple results at once.
+
+Lab 3 — Default Arguments
+  Code: defines power(base, exponent=2). Three calls demonstrate:
+    1. Calling with one argument → default exponent used (3² = 9)
+    2. Overriding the default    (3³ = 27)
+    3. A larger exponent         (2¹⁰ = 1024)
+  Inline comments on each call explain what is happening.
+
+ID convention followed: docker-lab-N, docker-editor-N, docker-code-N,
+docker-buttons-N, docker-run-N, docker-reset-N, docker-output-N.
+runDocker('N') / resetDocker('N') callbacks match the existing Lab 1 pattern.
+
+No JavaScript was added; the assumption is that a shared runDocker() /
+resetDocker() function (loaded elsewhere on the page or in the MkDocs theme)
+dispatches by lab number and calls the local Docker HTTP service.

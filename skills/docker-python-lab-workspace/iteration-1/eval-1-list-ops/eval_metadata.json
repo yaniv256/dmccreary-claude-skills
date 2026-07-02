@@ -1,0 +1,12 @@
+{
+  "eval_id": 1,
+  "eval_name": "eval-1-list-ops",
+  "prompt": "Add a Docker Python lab to docs/intermediate/22-lists-docker.md that teaches list operations. Include three labs: one showing how to create and print a list, one showing append/remove, and one showing list comprehensions. Make sure the shared CSS and JS are wired up in mkdocs.yml.",
+  "assertions": [
+    {"text": "three_labs_present", "description": "File contains exactly three docker lab divs with suffixes 1, 2, and 3"},
+    {"text": "correct_element_ids", "description": "Every lab has docker-lab-N, docker-code-N, docker-editor-N, docker-buttons-N, docker-run-N, docker-reset-N, docker-output-N for N in 1,2,3"},
+    {"text": "correct_onclick_handlers", "description": "Run buttons use runDocker('N') and Reset buttons use resetDocker('N') with matching suffix"},
+    {"text": "service_instruction_present", "description": "Page includes instruction to run bash scripts/run-python-docker.sh before using labs"},
+    {"text": "no_inline_css_or_js", "description": "Page does not contain <style> or <script> blocks — all styling/logic comes from shared files"}
+  ]
+}

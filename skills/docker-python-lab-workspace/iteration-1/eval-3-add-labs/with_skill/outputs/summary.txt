@@ -1,0 +1,34 @@
+Task: Add Lab 2 and Lab 3 to docs/intermediate/24-functions-docker.md
+
+Skill used: docker-python-lab (SKILL.md)
+
+What was done:
+- Read SKILL.md to learn the exact HTML template for Docker lab blocks,
+  including the required element ID naming convention (docker-lab-SUFFIX,
+  docker-editor-SUFFIX, docker-code-SUFFIX, docker-buttons-SUFFIX,
+  docker-run-SUFFIX, docker-reset-SUFFIX, docker-output-SUFFIX).
+- Preserved the existing Lab 1 content unchanged.
+- Added Lab 2 (suffix "2") demonstrating a recursive factorial function.
+  Code: defines factorial(n) with a base case of n==0, then prints
+  factorial(0), (1), (5), and (10). Includes prose explanation of
+  recursion and "Try these experiments" suggestions.
+- Added Lab 3 (suffix "3") demonstrating default function arguments.
+  Code: defines greet(name, greeting="Hello") and calls it three ways —
+  once with only a name (uses default), twice with explicit greetings.
+  Includes prose explanation and "Try these experiments" suggestions.
+
+Key SKILL.md rules followed:
+- Each lab has a unique suffix (1, 2, 3) applied consistently to every
+  element ID and the onclick runDocker()/resetDocker() calls.
+- Python code placed directly inside <textarea> at column 0 with no
+  leading indentation.
+- No rows="N" attribute on textareas (JS auto-sizes).
+- No id="main" on any element.
+- Every lab produces visible output via print() calls.
+- No use of input() or file I/O.
+- Only stdlib used (no third-party packages).
+- Horizontal rules (---) separate labs for readability.
+
+Output file:
+  /Users/dan/Documents/ws/claude-skills/skills/docker-python-lab-workspace/
+  iteration-1/eval-3-add-labs/with_skill/outputs/24-functions-docker.md

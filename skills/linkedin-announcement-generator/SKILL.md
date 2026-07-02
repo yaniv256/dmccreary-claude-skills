@@ -190,11 +190,26 @@ Generated using Claude AI skills and the intelligent textbook framework, this op
 
 **5. Call to Action (1 sentence)**
 
-Direct readers to the site:
+Direct readers to the site — but **never put the URL in the post body**.
+
+**The "link in the first comment" rule:** research shows LinkedIn's algorithm
+significantly reduces the reach of posts that contain external links in the
+post body. Instead, tell readers the link is in the comments, and provide the
+URL as a separate first-comment text the user pastes immediately after
+publishing:
+
+```
+🔗 Link to the full textbook is in the first comment below! 👇
+```
+
+Always generate the first-comment text along with the post:
 
 ```
 Explore the full textbook here: [SITE_URL]
 ```
+
+This rule applies to ALL external links (site URL, GitHub repo, blog posts) —
+none of them belong in the post body.
 
 **6. Hashtags (8-15 tags)**
 
@@ -322,7 +337,7 @@ If seeking contributors:
 
 **Related links:**
 
-If applicable:
+If applicable (all external links go in the first comment, never the post body):
 - Link to GitHub repository (for developers)
 - Link to related blog post or article
 - Link to presentation slides
@@ -350,6 +365,12 @@ Present the LinkedIn announcement(s) in a clear, copy-paste ready format:
 
 ---
 
+## First Comment (paste immediately after publishing)
+
+[Text containing the site URL — external links go here, never in the post body]
+
+---
+
 ## Suggested Enhancements
 
 **Visual:** [Description of recommended image/screenshot]
@@ -366,7 +387,8 @@ Present the LinkedIn announcement(s) in a clear, copy-paste ready format:
 
 Before finalizing, check that the announcement:
 
-- [ ] Includes the live site URL (working link)
+- [ ] Post body contains NO external links (LinkedIn cuts reach for posts with links)
+- [ ] A separate first-comment text with the live site URL is provided
 - [ ] Contains accurate metrics from book-metrics.json
 - [ ] Has 10-15 relevant hashtags
 - [ ] Mentions AI transparency
@@ -398,6 +420,9 @@ Three variations provided (full, medium, concise) - choose the one that fits you
 2. Paste into LinkedIn post composer
 3. Add a screenshot of your textbook (optional but recommended)
 4. Review and post!
+5. Immediately paste the provided first-comment text (with the link) as the first comment
+
+Remember: keep the link OUT of the post body — LinkedIn reduces reach for posts with external links. The link goes in the first comment.
 
 Pro tip: LinkedIn posts with images get 2x more engagement. Consider adding a screenshot of your learning graph or textbook homepage.
 ```
@@ -423,7 +448,7 @@ Generated using Claude AI skills and the intelligent textbook framework, this op
 
 All content follows Bloom's Taxonomy (2001) for learning outcomes and includes detailed explanations, worked examples, and practice exercises.
 
-🌐 Explore the full textbook: https://dmccreary.github.io/claude-skills/
+🔗 Link to the full textbook is in the first comment below! 👇
 
 #AI #GenAI #GenerativeAI #Education #EdTech #OpenEducation #OER #ELearning #Textbook #InteractiveTextbook #MicroSims #Visualizations #Quizzes #Geometry #Mathematics #MkDocs #ClaudeAI #LMS #CurriculumDesign #STEMeducation
 ```
@@ -444,7 +469,7 @@ Key features:
 
 Built using Claude AI and the intelligent textbook framework - demonstrating how AI can enhance educational content while maintaining quality.
 
-Explore it here: https://dmccreary.github.io/claude-skills/
+Link in the first comment below! 👇
 
 #AI #GenAI #Education #EdTech #OpenEducation #Textbook #MicroSims #Geometry #Mathematics #ClaudeAI #STEMeducation
 ```
@@ -458,9 +483,19 @@ Explore it here: https://dmccreary.github.io/claude-skills/
 
 AI-generated using Claude and MkDocs Material. Free and open source.
 
-📖 https://dmccreary.github.io/claude-skills/
+📖 Link in the first comment!
 
 #Education #EdTech #Geometry #AI #OpenEducation #Textbook
+```
+
+### First Comment Example
+
+Paste immediately after publishing (external links live here, not in the post):
+
+```
+Explore the full textbook here: https://dmccreary.github.io/claude-skills/
+
+GitHub repo: https://github.com/dmccreary/claude-skills
 ```
 
 ## Customization Options

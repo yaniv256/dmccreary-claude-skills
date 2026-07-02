@@ -1,0 +1,11 @@
+{
+  "eval_id": 3,
+  "eval_name": "eval-3-add-labs",
+  "prompt": "I already have docs/intermediate/24-functions-docker.md with one docker lab (suffix 1) about defining functions. Add a second lab (suffix 2) that shows a recursive function for factorial, and a third lab (suffix 3) that shows a function with default arguments.",
+  "assertions": [
+    {"text": "new_labs_have_suffixes_2_and_3", "description": "File now contains docker lab divs with suffixes 2 and 3"},
+    {"text": "factorial_in_lab_2", "description": "Lab 2 starter code defines and calls a factorial function using recursion"},
+    {"text": "default_args_in_lab_3", "description": "Lab 3 starter code demonstrates a function with at least one default parameter"},
+    {"text": "no_suffix_collision", "description": "No element IDs are duplicated — suffix 1 elements still present, suffix 2 and 3 are new"}
+  ]
+}
