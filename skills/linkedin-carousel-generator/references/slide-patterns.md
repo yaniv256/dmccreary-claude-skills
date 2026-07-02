@@ -1,7 +1,7 @@
 # Slide Patterns (pptxgenjs)
 
-Reusable pptxgenjs code patterns for the LinkedIn carousel. Every slide in the 12-slide deck
-is a variant of one of these eight patterns. Colors (`C.primary`, `C.accent`) come from the
+Reusable pptxgenjs code patterns for the LinkedIn carousel. Every slide in the 13-slide deck
+is a variant of one of these nine patterns. Colors (`C.primary`, `C.accent`) come from the
 project's `mkdocs.yml` theme palette — never hardcode generic blues.
 
 ## Setup
@@ -214,7 +214,37 @@ function badgeCalloutSlide(pptx, { heading, body, badgePath }) {
 }
 ```
 
-## 8. Closing CTA Slide (slide 12)
+## 8. Checklist Recap Slide (slide 12)
+
+A vertical list of 5-6 short checkmarked phrases — the single strongest fact pulled from each
+of slides 2-11, condensed to a few words each. This slide exists to close the loop before the
+CTA; it fails if any line runs longer than roughly seven words.
+
+```javascript
+function checklistRecapSlide(pptx, { heading, items }) {
+  // items: ["450 concepts, 0 dependency violations", "31 interactive MicroSims", ...]
+  const s = pptx.addSlide();
+  s.background = { color: C.white };
+  s.addText(heading, {
+    x: 0.6, y: 0.6, w: 8.8, h: 1.0,
+    fontFace: FONT_TITLE, fontSize: 28, bold: true, color: C.primary, align: "center",
+  });
+  const rowH = 6.8 / items.length;
+  items.forEach((item, i) => {
+    const y = 1.9 + i * rowH;
+    s.addText("✅", {
+      x: 0.9, y, w: 0.6, h: rowH, fontSize: 22, valign: "middle",
+    });
+    s.addText(item, {
+      x: 1.6, y, w: 7.2, h: rowH,
+      fontFace: FONT_BODY, fontSize: 18, bold: true, color: C.ink, valign: "middle",
+    });
+  });
+  return s;
+}
+```
+
+## 9. Closing CTA Slide (slide 13)
 
 Dark background matching slide 1 — bookends the deck.
 
@@ -247,7 +277,7 @@ function closingCtaSlide(pptx, { headline, siteUrl, repoUrl, mascotPath }) {
 }
 ```
 
-## Assembling the 12 Slides
+## Assembling the 13 Slides
 
 ```javascript
 coverSlide(pptx, { title: "...", subtitle: "...", mascotPath: "docs/img/mascot/welcome.png" });
@@ -261,6 +291,13 @@ iconRowSlide(pptx, { heading: "Beyond the Chapters", items: [...] }); // glossar
 badgeCalloutSlide(pptx, { heading: "Open License", body: "...", badgePath: "docs/img/license.png" });
 // slide 10 (adaptivity) and 11 (continuous enrichment): reuse iconRowSlide or imageAsideSlide,
 // whichever fits the specific content better
+checklistRecapSlide(pptx, { heading: "Why Students & Teachers Love It", items: [
+  "450 concepts, 0 dependency violations",
+  "31 interactive MicroSims",
+  "338 glossary terms, 380 quiz questions",
+  "Free & open source, no accounts required",
+  "Skills-based framework — easy to adapt for your class",
+] });
 closingCtaSlide(pptx, { headline: "...", siteUrl: "...", repoUrl: "...", mascotPath: "docs/img/mascot/celebration.png" });
 
 await pptx.writeFile({ fileName: "linkedin/<kebab-title>-carousel.pptx" });

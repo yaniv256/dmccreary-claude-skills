@@ -18,7 +18,8 @@ sources.
 | 9 | License | `docs/license.md` | License type and short rights summary (share/adapt/attribution terms) | `docs/img/license.png` |
 | 10 | Adaptivity | Project's own skill usage (course-description → learning-graph-generator → chapter-content-generator pipeline) | Describe the pipeline conceptually — name the actual skills used if this project used them | Simple 3-4 box pipeline diagram, or omit image and use icon-row |
 | 11 | Continuous Enrichment | No canonical file — this is a forward-looking capability statement | Phrase as "can be configured to..." not as a description of an already-running system, unless the project genuinely has this (e.g. `register-book-analytics` wired up + a documented A/B process) | none, or a simple feedback-loop icon |
-| 12 | Closing CTA | `mkdocs.yml` | `site_url`, `repo_url` | mascot `celebration.png` |
+| 12 | Summary of Benefits | Everything above — the single strongest fact from each of slides 2-11, condensed to a few words | Re-read slides 2-11 after drafting them and pull the one number/claim from each that would make someone stop scrolling; 5-6 lines total, never one line per slide | none — checklist pattern |
+| 13 | Closing CTA | `mkdocs.yml` | `site_url`, `repo_url` | mascot `celebration.png` |
 
 ## Extraction one-liners
 

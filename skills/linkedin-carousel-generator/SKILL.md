@@ -1,13 +1,13 @@
 ---
 name: linkedin-carousel-generator
-description: Generates a 12-slide LinkedIn carousel (a "document post" — PPTX/PDF) that showcases an intelligent textbook's key features, with real screenshots, mascot art, and metrics pulled from the project. Use when the user wants a LinkedIn slideshow/carousel/document post for a textbook, as opposed to linkedin-announcement-generator which produces post *text* only.
+description: Generates a 13-slide LinkedIn carousel (a "document post" — PPTX/PDF) that showcases an intelligent textbook's key features, with real screenshots, mascot art, and metrics pulled from the project. Use when the user wants a LinkedIn slideshow/carousel/document post for a textbook, as opposed to linkedin-announcement-generator which produces post *text* only.
 license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
 model: sonnet
 ---
 
 # LinkedIn Carousel Generator
 
-Generates a 12-slide LinkedIn carousel — LinkedIn calls this a **"document post"** — that
+Generates a 13-slide LinkedIn carousel — LinkedIn calls this a **"document post"** — that
 visually walks a reader through what makes an intelligent textbook worth exploring. Unlike
 `linkedin-announcement-generator` (which writes the post's caption text), this skill produces
 the **artifact itself**: a square, mobile-readable slide deck the reader swipes through in
@@ -51,7 +51,7 @@ If any prerequisite is missing, tell the user which one and point at the skill t
 it rather than improvising a substitute (e.g. don't hand-draw a learning graph image if
 `book-metrics.json` and a real graph viewer exist).
 
-## The 12 Slides
+## The 13 Slides
 
 | # | Slide | Content source | Image source |
 |---|-------|-----------------|---------------|
@@ -66,11 +66,18 @@ it rather than improvising a substitute (e.g. don't hand-draw a learning graph i
 | 9 | License | `docs/license.md` license type | `docs/img/license.png` + note on customizing colors/logo/mascot for another school |
 | 10 | Adaptivity | How Claude Skills add whole new chapters/lessons consistent with the existing book (course-description → learning-graph → chapter generators) | Simple pipeline diagram (3-4 boxes) |
 | 11 | Continuous Enrichment | Forward-looking: agents proposing content/MicroSim variants, measured via analytics/A/B testing, phrased as a capability the framework *supports*, not a claim of an existing automated pipeline | Icon-based, light touch |
-| 12 | Closing CTA | Site URL, GitHub repo URL, "free & open source" | mascot `celebration.png`, dark background matching slide 1 |
+| 12 | Summary of Benefits | A recap checklist of the strongest points from slides 2-11 — the 5-6 most compelling facts, each condensed to a single bolded phrase (e.g. "450 concepts, 0 dependency violations", "31 interactive MicroSims", "Free & open source") | none — checklist pattern, no image needed |
+| 13 | Closing CTA | Site URL, GitHub repo URL, "free & open source" | mascot `celebration.png`, dark background matching slide 1 |
 
 This mapping is a strong default, not a rigid template — if the project lacks one of these
 elements (no stories, zero equations, etc.), drop or substitute a slide rather than showing a
 zero. See `references/content-sourcing.md` for the exact extraction commands for every slide.
+
+**Slide 12 exists to close the loop before the CTA:** by slide 11 the reader has seen ten
+different facts in ten different visual styles — slide 12 pulls the single strongest claim out
+of each of slides 2-11 into one scannable list, so a reader who only skims gets the whole
+pitch in five seconds before hitting the ask on slide 13. Pick the *best* fact per slide, not
+every fact — this slide fails if it turns back into a wall of text.
 
 ## Workflow
 
@@ -126,14 +133,15 @@ plain form-based one), then:
 ### Step 3: Confirm the Outline Before Generating
 
 Before writing any slide code, show the user:
-- The 12-slide plan with the specific numbers it will display (e.g. "38 chapters, 450
+- The 13-slide plan with the specific numbers it will display (e.g. "38 chapters, 450
   concepts, 31 MicroSims, 338 glossary terms")
 - Which chapters you picked to highlight on slide 4
 - Which MicroSim you picked for slide 7
+- Which 5-6 facts you picked for the slide 12 benefits recap
 
 This is a quick sanity check, not a full design review — the numbers are objective (pulled
-from `book-metrics.json`), but the chapter/MicroSim picks are subjective and worth a 10-second
-confirmation before building 12 slides around them.
+from `book-metrics.json`), but the chapter/MicroSim/recap picks are subjective and worth a
+10-second confirmation before building 13 slides around them.
 
 ### Step 4: Set Up the pptxgenjs Project
 
@@ -149,19 +157,19 @@ they express a preference, otherwise default to square.
 
 ### Step 5: Build Each Slide
 
-Read `references/slide-patterns.md` for the eight reusable pptxgenjs slide patterns (title/
-cover, mascot-aside, image-aside, big-numbers, icon-row, pose-grid, badge-callout, closing CTA)
-and `references/content-sourcing.md` for exactly which field feeds which slide. Map the 12
-slides in the table above onto these patterns — several slides reuse the same pattern with
-different content (e.g. slides 2, 3, 9 are all variants of "image on one side, text on the
-other").
+Read `references/slide-patterns.md` for the nine reusable pptxgenjs slide patterns (title/
+cover, mascot-aside, image-aside, big-numbers, icon-row, pose-grid, badge-callout, checklist
+recap, closing CTA) and `references/content-sourcing.md` for exactly which field feeds which
+slide. Map the 13 slides in the table above onto these patterns — several slides reuse the
+same pattern with different content (e.g. slides 2, 3, 9 are all variants of "image on one
+side, text on the other").
 
 **Design rules — LinkedIn carousels are read on a phone, not projected:**
 - No more than ~25 words of body text per slide (this is a stricter cap than a lecture deck)
 - Minimum 18pt body text, 36pt+ for headlines — small text is illegible in the LinkedIn
   in-feed thumbnail
 - One idea per slide, always
-- Dark background (primary color) for slides 1 and 12 only — bookends the deck; slides 2-11
+- Dark background (primary color) for slides 1 and 13 only — bookends the deck; slides 2-12
   stay light/white for readability and print/PDF friendliness
 - Use the project's actual `theme.palette.primary` / `accent` from `mkdocs.yml`, not generic
   blues
@@ -169,8 +177,8 @@ other").
 ### Step 6: Generate and Verify
 
 1. Run the Node.js script to produce the `.pptx`
-2. Confirm exactly 12 slides were produced
-3. Open each slide (or export slide 1, 3, 6, 7, and 12 as PNGs) and visually check that no
+2. Confirm exactly 13 slides were produced
+3. Open each slide (or export slide 1, 3, 6, 7, 12, and 13 as PNGs) and visually check that no
    text overflows its box and that images aren't stretched or pixelated
 4. Report slide count and file size to the user
 
@@ -186,12 +194,12 @@ soffice --headless --convert-to pdf --outdir linkedin linkedin/<kebab-title>-car
 ```
 
 Tell the user LinkedIn will also ask for a **document title** shown above the carousel in the
-feed — suggest a short, benefit-led title (e.g. "12 Things That Make This Python Textbook
+feed — suggest a short, benefit-led title (e.g. "13 Things That Make This Python Textbook
 Different"), not the book's formal title.
 
 Remind the user of the same rule from `linkedin-announcement-generator`: the **post caption**
 should not contain the external site link (LinkedIn suppresses reach on posts with links in the
-body) — but a URL printed as **text on slide 12 of the document itself** is fine, since it's
+body) — but a URL printed as **text on slide 13 of the document itself** is fine, since it's
 not a clickable hyperlink in the post body. If they're also posting caption text, hand off to
 `linkedin-announcement-generator` and tell them to paste the site URL as the first comment,
 same as always.
@@ -212,14 +220,15 @@ Keep this directory outside `docs/` (sibling to it, like `presentation/` in
 
 ## Quality Checklist
 
-- [ ] Exactly 12 slides
+- [ ] Exactly 13 slides
 - [ ] Every number on every slide traces back to `book-metrics.json` (no invented stats)
 - [ ] Learning-graph image is a legible zoomed crop, not the full dense graph
 - [ ] Mascot poses shown match the character sheet's actual pose set
 - [ ] Colors match the project's `mkdocs.yml` theme palette
 - [ ] No slide exceeds ~25 words of body text
 - [ ] Body text is 18pt+ everywhere
-- [ ] Slide 12 has a clear URL and call to action
+- [ ] Slide 12's benefits recap pulls one strongest fact per prior slide, not every fact
+- [ ] Slide 13 has a clear URL and call to action
 - [ ] File opens cleanly in PowerPoint/Keynote/Google Slides with no broken image links
 
 ## Troubleshooting
