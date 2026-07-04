@@ -107,6 +107,8 @@ document — a link back to the source page.>
 
 Drop the "Download PDF" button/line entirely if no PDF was exported. The 600px iframe height suits the default 16:9 Marp layout; the global `iframe { border: solid 2px blue; }` rule in `docs/css/extra.css` applies automatically — don't override it.
 
+**YAML frontmatter and colons.** A colon followed by a space (`: `) inside a frontmatter value breaks YAML parsing, because YAML reads it as a new key. `title: Claude Skills for Intelligent Textbooks: Overview` parses as key `title` with value `Claude Skills for Intelligent Textbooks`, then errors on the stray `Overview`. Prefer rewording the title/description to avoid a colon in the first place — e.g. an em dash or "—" reads just as well as a colon and never needs quoting (`Claude Skills for Intelligent Textbooks — Overview`). If a colon is unavoidable (a deck title quoting a colon-bearing phrase, for instance), wrap the whole value in double quotes: `title: "Claude Skills for Intelligent Textbooks: Overview"`. This applies to every frontmatter value you write in this skill — `index.md`, `docs/slides/index.md`, and the `title`/`label` values in `mkdocs.yml` nav entries alike.
+
 ### 6. Write `metadata.json`
 
 ```json
@@ -180,6 +182,7 @@ Tell the user the deck's file paths, that they can preview it with `mkdocs serve
 - **Don't silently drop content when condensing an existing document.** Put what doesn't fit on the visible slide into an HTML-comment speaker note instead.
 - **Don't use client-side MARP JS rendering (`marp-it`/CDN bundle) instead of the pre-rendered HTML export.** It adds a runtime CDN dependency for no benefit here — see [references/mkdocs-integration.md](references/mkdocs-integration.md) for why the self-contained export is more robust for a statically-hosted MkDocs site.
 - **Don't skip the outline-confirmation step (§2) for anything beyond a handful of slides.** Reshuffling an outline is cheap; reshuffling a finished deck is not.
+- **Don't write an unquoted colon into a YAML frontmatter value.** `title: Some Thing: A Subtitle` silently breaks parsing. Prefer a colon-free phrasing (em dash instead of colon) in titles/descriptions; if a colon is truly unavoidable, quote the whole value.
 
 ## Reference docs
 
