@@ -171,11 +171,11 @@ After creating each `references.md`, add a **References** sub-entry to the chapt
 
 ---
 
-## Step 7: Generate the Cover Image
+## Step 7: Generate the Cover Image Prompt
 
-**Target:** `docs/img/cover.png`
+**Target:** `docs/img/cover-image-prompt.md` (and `docs/img/cover.png` only if the user explicitly requests auto-generation)
 
-A high-quality cover image anchors the landing page, social previews, and README. Generate it now — before the landing page — so the landing page can reference it directly.
+A high-quality cover image anchors the landing page, social previews, and README. Generate the prompt now — before the landing page — so the landing page can reference the cover once it exists.
 
 If `docs/img/cover.png` already exists and the user did not choose overwrite, skip this step.
 
@@ -185,7 +185,9 @@ Otherwise, invoke the `cover-image-generator` reference:
 Read references/cover-image-generator.md and execute its workflow for this project.
 ```
 
-After the image is generated:
+`cover-image-generator.md` writes `docs/img/cover-image-prompt.md` by default and does **not** call any image generation API or script unless the user explicitly asks for auto-generation as part of this coordinated run. If the user hasn't opted in, report the prompt file as ready, note that the landing page and social preview will reference `docs/img/cover.png` once the user (or an explicit follow-up request) produces it, and continue to Step 8 without blocking on it.
+
+If the image was generated (either because the user opted in during this step, or `docs/img/cover.png` already existed):
 1. Confirm it is saved to `docs/img/cover.png` (1200×628 px, 1.91:1 aspect ratio).
 2. Install the social-media-preview hook if not already present:
    ```
@@ -335,7 +337,7 @@ Report the results to the user. For any MISSING item, offer to generate it now.
 | 4 | `docs/faq.md` | `faq-generator` skill | Sonnet |
 | 5 | Per-chapter `quiz.md` | `quiz-generator` skill | Sonnet |
 | 6 | Per-chapter `references.md` | `reference-generator` skill | Sonnet |
-| 7 | `docs/img/cover.png` | `references/cover-image-generator.md` | Sonnet (+ AI image tool) |
+| 7 | `docs/img/cover-image-prompt.md` (`docs/img/cover.png` only if requested) | `references/cover-image-generator.md` | Sonnet (+ AI image tool if auto-generation is requested) |
 | 8 | `docs/book-metrics.md` | `bk-generate-book-metrics` script | — |
 | 9 | `docs/diagram-reports.md` | `bk-diagram-reports` script | — |
 | 10 | `README.md` | `readme-generator` skill | Sonnet |
@@ -352,6 +354,6 @@ Report the results to the user. For any MISSING item, offer to generate it now.
 - **Run in phases**: If the book has many chapters, generate quizzes and references for one or two chapters first to confirm quality, then batch the rest.
 - **Glossary before FAQ**: The FAQ generator produces better output when it can reference glossary definitions, so always run Step 3 before Step 4.
 - **Metrics before README and landing page**: Steps 8–9 run before Steps 10–11 intentionally — both the README and landing page embed content counts from the metrics output.
-- **Cover before landing page**: Step 7 runs before Step 11 so the landing page can reference `docs/img/cover.png` directly.
+- **Cover before landing page**: Step 7 runs before Step 11 so the landing page can reference `docs/img/cover.png` directly if it exists; otherwise the landing page can reference `docs/img/cover-image-prompt.md` and note the image is pending manual or on-request generation.
 - **Check bk scripts in PATH**: Both `bk-generate-book-metrics` and `bk-diagram-reports` must be installed in a directory on `$PATH`. If missing, skip and note it in the verification report.
 - **Nav ordering**: Place Glossary and FAQ near the end of the nav, after all chapters. About page goes last.

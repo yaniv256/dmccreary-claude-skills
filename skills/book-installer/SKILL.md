@@ -33,7 +33,7 @@ Book Installer Features (most → least common):
  3. Favicon - Browser tab/bookmark icon
  3b. Generate favicon from mascot - Auto-generate favicon.ico from neutral.png mascot image
  4. Cover image & social preview - Home page image + og:image metadata
- 4b. Generate cover image - Auto-generate cover using AI (API or ChatGPT)
+ 4b. Generate cover image prompt - Create a prompt for generating a cover image using text-to-image AI (DALL-E, Midjourney, etc.)
  4c. Social media preview hook - Inject og:* / twitter:* meta tags via MkDocs hook (no Cairo required)
  5. Math equations - KaTeX (recommended) or MathJax
  6. Code syntax highlighting - Language-aware code blocks
@@ -113,7 +113,7 @@ Match the user's request to the appropriate installation guide:
 | new project, mkdocs, textbook, bootstrap, setup, template, new book | `references/mkdocs-template.md` | Create new MkDocs Material project |
 | graph viewer, learning graph, visualization, interactive graph, concept viewer | `references/learning-graph-viewer.md` | Add learning graph viewer to existing project |
 | track skills, skill usage, activity tracking, hooks, usage analytics | `references/skill-tracker.md` | Set up skill tracking with hooks |
-| generate cover, generate cover image, auto cover, create cover image, run cover script | `references/cover-image-generator.md` | Auto-generate cover image using AI (guides through API/ChatGPT options) |
+| generate cover image prompt, generate cover image, auto cover image prompt, create cover image promt, run cover prompt script | `references/cover-image-generator.md` | Generate a high-quality cover image prompt from the book's own content; image auto-generation via API/ChatGPT is optional and only runs if explicitly requested |
 | cover image, home page, montage, book cover, index page | `references/home-page-template.md` | Create home page with cover image and social metadata |
 | social media preview, social card, social meta, og:image, og:title, og:description, open graph, twitter card, twitter image, linkedin preview, slack unfurl, bk-check-social-cover, social hook, social override | `references/social-media-preview.md` | Install the Cairo-free hook that injects og:* and twitter:* meta tags on every page |
 | logo, site logo, branding, upper left, header icon | `references/mkdocs-features.md` | Add custom logo with AI prompt examples |
@@ -155,8 +155,8 @@ Adding a learning graph viewer to existing project?
 Setting up skill usage tracking?
   → YES: skill-tracker.md
 
-Want to GENERATE a cover image automatically using AI?
-  → YES: cover-image-generator.md (guides through API vs ChatGPT options)
+Want to GENERATE a high-quality cover image prompt from the book's content?
+  → YES: cover-image-generator.md (prompt is the default output; auto-generation via API/ChatGPT only runs if explicitly requested)
 
 Creating a cover image MANUALLY or setting up home page with social metadata?
   → YES: home-page-template.md
@@ -476,23 +476,18 @@ See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textb
 
 ### cover-image-generator.md
 
-**Purpose:** Auto-generate cover images using the generate-cover.sh script
+**Purpose:** Craft a high-quality cover image prompt at `docs/img/cover-image-prompt.md`, built from the book's title, course description, concept list, mascot, and MicroSim screenshots. Image auto-generation is optional and only runs if the user explicitly asks for it.
 
 **Provides:**
-- Interactive questionnaire to determine best workflow
-- Commands for API, ChatGPT Pro, or manual generation
-- Troubleshooting for common issues
-
-**Workflows:**
-- **Full Auto**: OpenAI API with active billing (fastest)
-- **Browser Auto**: ChatGPT Pro + macOS (opens browser, pastes prompt)
-- **Local Prompt**: ChatGPT Pro, any OS (displays prompt for manual copy)
-- **Fallback**: Free tier options with manual generation
+- Guidance for selecting 6-10 montage concepts from the book's own content
+- A detailed prompt template covering subject/tone, title typography, montage, mascot, style/color, and things to avoid
+- Recommended manual review loop: paste the prompt into a text-to-image tool, compare drafts, iterate on the prompt before finalizing
+- Optional automated paths (API, browser automation, or local-prompt) with troubleshooting — only used on explicit request
 
 **Prerequisites:**
 - Existing MkDocs project with mkdocs.yml
 - docs/course-description.md with book content description
-- One of: OpenAI API billing, ChatGPT Pro subscription, or free AI image generator
+- Only if auto-generation is requested: OpenAI API billing, ChatGPT Pro subscription, or a free AI image generator
 
 ### kanban-board.md
 
@@ -631,10 +626,10 @@ See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textb
 **Routing:** Keywords "og:image", "home page" → `references/home-page-template.md`
 **Action:** Read home-page-template.md and follow its workflow
 
-### Example 8: Generate Cover Image Automatically
+### Example 8: Generate Cover Image Prompt
 **User:** "generate cover image" or "book-installer generate cover image"
 **Routing:** Keywords "generate cover image" → `references/cover-image-generator.md`
-**Action:** Read cover-image-generator.md, ask user about their resources (API key, ChatGPT Pro, macOS), then run the appropriate generate-cover.sh command
+**Action:** Read cover-image-generator.md, gather source material (title, course description, concept list, mascot, MicroSim screenshots), write `docs/img/cover-image-prompt.md`, and recommend the user paste it into a text-to-image tool and review drafts. Only ask about API key/ChatGPT Pro/macOS and run `generate-cover.sh` if the user explicitly requests auto-generation.
 
 ### Example 9: Add a Learning Mascot
 **User:** "I want to add a mascot character to my math textbook"
@@ -696,7 +691,7 @@ See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textb
 ### Full Project Setup
 For a complete new project, users typically run these installations in order:
 1. `mkdocs-template.md` - Create the project structure
-2. `cover-image-generator.md` - Auto-generate cover image using AI
+2. `cover-image-generator.md` - Generate a high-quality cover image prompt (auto-generation optional, on request)
 3. `home-page-template.md` - Configure home page with cover image metadata
 4. `social-media-preview.md` - Install the og:* / twitter:* meta-tag hook (verify with `bk-check-social-cover`)
 5. `learning-graph-viewer.md` - Add graph visualization (after learning graph exists)
