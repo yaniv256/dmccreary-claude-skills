@@ -243,7 +243,7 @@ bloom_level: {bloom_level}
 ## Specification
 
 The full specification below is extracted from
-[Chapter {chapter_number}: {chapter_title}](../../chapters/{chapter_dir}/index.md).
+[Chapter {chapter_number}: {chapter_title}](../../{chapter_rel_dir}/index.md).
 
 ```text
 {specification}
@@ -251,7 +251,7 @@ The full specification below is extracted from
 
 ## Related Resources
 
-- [Chapter {chapter_number}: {chapter_title}](../../chapters/{chapter_dir}/index.md)
+- [Chapter {chapter_number}: {chapter_title}](../../{chapter_rel_dir}/index.md)
 """
 
 
@@ -282,6 +282,7 @@ def make_metadata(
         "chapter_number": spec.get("chapter_number"),
         "chapter_title": spec.get("chapter_title"),
         "chapter_dir": spec.get("chapter_dir"),
+        "chapter_rel_dir": spec.get("chapter_rel_dir") or f"chapters/{spec.get('chapter_dir') or ''}",
     }
 
 
@@ -357,6 +358,8 @@ def scaffold_one(
         spec_block=indent_block(specification, "    "),
     )
 
+    chapter_rel_dir = spec.get("chapter_rel_dir") or f"chapters/{spec.get('chapter_dir') or ''}"
+
     md_out = INDEX_MD_TEMPLATE.format(
         title=title,
         description=description,
@@ -366,7 +369,7 @@ def scaffold_one(
         learning_objective=learning_objective,
         chapter_number=spec.get("chapter_number") or "?",
         chapter_title=spec.get("chapter_title") or "",
-        chapter_dir=spec.get("chapter_dir") or "",
+        chapter_rel_dir=chapter_rel_dir,
         specification=specification,
     )
 

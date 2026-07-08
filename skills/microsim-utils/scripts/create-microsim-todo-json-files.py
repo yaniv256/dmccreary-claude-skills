@@ -55,13 +55,24 @@ def extract_field(text, field_name):
     return None
 
 
-def extract_diagrams_from_chapter(filepath):
-    """Parse a chapter index.md and return a list of diagram spec dicts."""
+def extract_diagrams_from_chapter(filepath, docs_dir=None):
+    """Parse a chapter index.md and return a list of diagram spec dicts.
+
+    docs_dir, if given, is used to compute chapter_rel_dir: the chapter's
+    directory path relative to docs/ (e.g. "chapters/01-foo" for the flat
+    layout, or "bands/grade-3/chapters/01-foo" for a banded layout). This
+    lets the scaffolder build a correct back-link regardless of how many
+    levels deep the chapter actually lives.
+    """
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
 
     # Extract chapter number and title from frontmatter or first heading
     chapter_dir = os.path.basename(os.path.dirname(filepath))
+    if docs_dir:
+        chapter_rel_dir = os.path.relpath(os.path.dirname(filepath), docs_dir).replace(os.sep, "/")
+    else:
+        chapter_rel_dir = f"chapters/{chapter_dir}"
     chapter_match = re.match(r"(\d+)-(.+)", chapter_dir)
     chapter_num = int(chapter_match.group(1)) if chapter_match else 0
     chapter_title_raw = chapter_match.group(2).replace("-", " ").title() if chapter_match else chapter_dir
@@ -110,8 +121,12 @@ def extract_diagrams_from_chapter(filepath):
         # Extract other fields (supports both bold-markdown and plain-text formats)
         library = extract_field(details_text, "Library") or extract_field(details_text, "Implementation")
         status = extract_field(details_text, "Status")
-        bloom_level = extract_field(details_text, "Bloom Level") or extract_field(details_text, "Bloom Taxonomy Level")
-        bloom_verb = extract_field(details_text, "Bloom Verb")
+        bloom_level = (
+            extract_field(details_text, "Bloom Level")
+            or extract_field(details_text, "Bloom Taxonomy Level")
+            or extract_field(details_text, "Bloom Taxonomy")
+        )
+        bloom_verb = extract_field(details_text, "Bloom Verb") or extract_field(details_text, "Bloom Taxonomy Verb")
 
         # Extract learning objective (bold or plain-text format)
         # Case-insensitive so authors writing "Learning objective:" (lowercase 'o')
@@ -150,6 +165,7 @@ def extract_diagrams_from_chapter(filepath):
             "chapter_number": chapter_num,
             "chapter_title": chapter_title,
             "chapter_dir": chapter_dir,
+            "chapter_rel_dir": chapter_rel_dir,
             "library": library,
             "status": status,
             "bloom_level": bloom_level,
@@ -190,7 +206,12 @@ def main():
     docs_dir = os.path.join(project_root, "docs")
     sims_dir = os.path.join(docs_dir, "sims")
     todo_dir = os.path.join(sims_dir, "TODO")
-    chapters_pattern = os.path.join(docs_dir, "chapters", "*", "index.md")
+    # Support both the flat layout (docs/chapters/<dir>/index.md) and a
+    # banded layout (docs/bands/<band>/chapters/<dir>/index.md).
+    chapters_patterns = [
+        os.path.join(docs_dir, "chapters", "*", "index.md"),
+        os.path.join(docs_dir, "bands", "*", "chapters", "*", "index.md"),
+    ]
 
     # Ensure TODO directory exists
     os.makedirs(todo_dir, exist_ok=True)
@@ -213,12 +234,14 @@ def main():
             if entry.endswith(".json"):
                 done_sims.add(entry.replace(".json", ""))
 
-    # Process all chapter files
-    chapter_files = sorted(glob.glob(chapters_pattern))
+    # Process all chapter files (dedup in case layouts overlap)
+    chapter_files = sorted(set(
+        f for pattern in chapters_patterns for f in glob.glob(pattern)
+    ))
     all_diagrams = []
 
     for chapter_file in chapter_files:
-        diagrams = extract_diagrams_from_chapter(chapter_file)
+        diagrams = extract_diagrams_from_chapter(chapter_file, docs_dir=docs_dir)
         all_diagrams.extend(diagrams)
 
     # Filter to only unimplemented diagrams
@@ -239,6 +262,7 @@ def main():
             "chapter_number": diagram["chapter_number"],
             "chapter_title": diagram["chapter_title"],
             "chapter_dir": diagram["chapter_dir"],
+            "chapter_rel_dir": diagram["chapter_rel_dir"],
             "library": diagram["library"],
             "bloom_level": diagram["bloom_level"],
             "bloom_verb": diagram["bloom_verb"],
