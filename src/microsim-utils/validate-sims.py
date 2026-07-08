@@ -14,7 +14,8 @@ Scoring Rubric (100 points):
   image (5): screenshot PNG exists
   lesson plan (10): Lesson Plan section present
   references (5): References section present
-  p5.js conventions (5): updateCanvasSize, no DOM buttons, <main> parenting
+  p5.js conventions (5): updateCanvasSize, builtin controls (not manually
+                         drawn), <main> parenting
 
 Usage:
     python3 validate-sims.py [--project-dir PATH] [--sim NAME]
@@ -251,15 +252,25 @@ def _check_p5_conventions(sim_dir):
     else:
         issues.append("p5.js: missing updateCanvasSize() call")
 
-    # No DOM buttons — createButton, createSlider, createCheckbox (2 pts)
-    dom_funcs = re.findall(
+    # Builtin controls, not manually drawn ones (2 pts).
+    # Project standard: ALWAYS use p5.js builtin controls (createButton,
+    # createSlider, etc.); never draw controls with rect() + mouse hit-testing.
+    builtin_controls = re.findall(
         r"create(?:Button|Slider|Checkbox|Select|Input|Radio)\s*\(",
         js_content,
     )
-    if not dom_funcs:
+    manual_hit_testing = (
+        re.search(r"\bfunction\s+mouse(?:Pressed|Clicked|Released)\b", js_content)
+        and re.search(r"\bmouseX\s*[<>]", js_content)
+        and re.search(r"\bmouseY\s*[<>]", js_content)
+    )
+    if builtin_controls or not manual_hit_testing:
         score += 2
     else:
-        issues.append(f"p5.js: uses DOM functions ({', '.join(set(dom_funcs))})")
+        issues.append(
+            "p5.js: controls appear manually drawn (mouse hit-testing, no "
+            "createButton/createSlider/etc.) — use builtin p5.js controls"
+        )
 
     # Correct canvas parenting: document.querySelector('main') (1 pt)
     if "document.querySelector" in js_content and "'main'" in js_content:
