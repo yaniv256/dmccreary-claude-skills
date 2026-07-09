@@ -15,6 +15,7 @@ These utilities eliminate repetitive work when batch-generating MicroSims:
 | `update-mkdocs-nav.py` | Regenerate MicroSims nav section | ~100K |
 | `generate-sims-index.py` | Build the `docs/sims/index.md` thumbnail gallery | ~40K |
 | `add-iframes-to-chapter.py` | Insert missing iframes + fix heights/paths | ~50K |
+| `sync-iframe-heights.py` | Set every sim iframe to `CANVAS_HEIGHT + 2` (own page + all embeds) | ~40K |
 | `validate-sims.py` | 100-point quality rubric scoring | ~50K |
 
 ## Workflow
@@ -126,6 +127,47 @@ python3 add-iframes-to-chapter.py --all --project-dir /path/to/project --fix-hei
 # Just fix typos and paths
 python3 add-iframes-to-chapter.py --all --project-dir /path/to/project --fix-heights --fix-paths --verbose
 ```
+
+### sync-iframe-heights.py
+
+Set every iframe that shows a sim to `CANVAS_HEIGHT + 2` — the sim's own
+`docs/sims/<id>/index.md` **and** every page that embeds it. `CANVAS_HEIGHT`
+is resolved per sim from the first source that has it:
+
+1. `// CANVAS_HEIGHT: <n>` in the first ~15 lines of `<id>.js` (primary)
+2. `"canvasHeight": <n>` in `metadata.json` — the consistent place for sims
+   with **no `.js`** (Mermaid, vis-network, Chart.js, Leaflet, vis-timeline,
+   Plotly, custom HTML)
+3. `<!-- CANVAS_HEIGHT: <n> -->` in `main.html` (back-compat)
+4. computed `drawHeight + controlHeight` (+ `graphHeight`) from `<id>.js`,
+   then the `// CANVAS_HEIGHT` comment is inserted on line 2
+
+The embed scan walks every `*.md` under `docs/` and matches iframes by the
+`sims/<id>/main.html` path, so it is layout-agnostic — it handles the standard
+`docs/chapters/<chapter>/index.md` layout **and** the nested
+`docs/bands/<band>/chapters/<chapter>/index.md` layout unique to the
+`health-education` textbook. Poster embeds and the learning-graph viewer are
+never touched.
+
+```bash
+# Preview
+python3 sync-iframe-heights.py --project-dir /path/to/project --dry-run --verbose
+
+# Apply
+python3 sync-iframe-heights.py --project-dir /path/to/project
+
+# Single sim
+python3 sync-iframe-heights.py --project-dir /path/to/project --sim gradient-explorer
+
+# Also backfill metadata.json canvasHeight (migrate no-.js sims to the structured store)
+python3 sync-iframe-heights.py --project-dir /path/to/project --write-metadata
+```
+
+See the microsim-utils skill's `references/canvas-height-strategy.md` for the
+full convention and how the height is communicated to downstream agents.
+
+> `fix-iframe-heights.py` is the older, own-page-only predecessor
+> (it does not update chapter embeds). Prefer `sync-iframe-heights.py`.
 
 ### validate-sims.py
 

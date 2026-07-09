@@ -329,7 +329,9 @@ Each guide contains:
 
 ### 4.4 MANDATORY: Add CANVAS_HEIGHT Comment to .js File
 
-**Every .js file MUST include a `// CANVAS_HEIGHT:` comment on its own line near the top of the file (within the first 10 lines).** This is the single source of truth for iframe height across all library types. The `fix-iframe-heights.py` utility and manual height-fixing both rely on this comment.
+**Every .js file MUST include a `// CANVAS_HEIGHT:` comment on its own line near the top of the file (within the first 10 lines).** This is the primary source of truth for iframe height across all library types. The `fix-iframe-heights.py` / `sync-iframe-heights.py` utilities and manual height-fixing rely on it.
+
+> **No-`.js` sims:** if a sim is rendered entirely by `main.html` and ships **no `<id>.js`** (some projects author Mermaid, vis-network, or custom-HTML sims this way), there is no `.js` to hold the comment. Store the height in the sim's `metadata.json` instead, as `"canvasHeight": <integer>` — the consistent structured fallback that downstream tooling reads next after the `.js` comment. See the microsim-utils skill's `references/canvas-height-strategy.md` for the full resolution order. Everything else in this step (how to *calculate* the number, the `+2` iframe rule) is identical.
 
 Format: `// CANVAS_HEIGHT: <integer>`
 

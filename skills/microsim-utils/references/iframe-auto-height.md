@@ -161,7 +161,7 @@ These two systems do not conflict:
 
 | System | When it runs | Source of truth | Best for |
 |---|---|---|---|
-| `sync-iframe-heights.py` | Build / pre-commit | `// CANVAS_HEIGHT:` comment in `.js` | p5.js sims with fixed canvas heights |
+| `sync-iframe-heights.py` | Build / pre-commit | `CANVAS_HEIGHT` resolved from the `.js` comment, `metadata.json`, the `main.html` comment, or computed vars (see [`canvas-height-strategy.md`](canvas-height-strategy.md)) | Any library with a knowable fixed height (p5.js, Mermaid, vis-network, Chart.js, …) |
 | Runtime postMessage | Page load in browser | `document.body.scrollHeight` at runtime | Sims with responsive or content-dependent heights |
 
 If both are configured, the static height becomes the loading-state

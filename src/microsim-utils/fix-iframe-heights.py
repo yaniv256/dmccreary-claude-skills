@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """Fix iframe heights in each MicroSim's index.md to match the actual sim height.
 
-Parses JS files to detect canvas/container heights and updates the iframe tag
-in each sim's index.md accordingly.
+Own-page-only predecessor of `sync-iframe-heights.py` (which also updates chapter
+embeds and shares this same resolution order). Prefer `sync-iframe-heights.py`
+for full propagation; see `references/canvas-height-strategy.md`.
 
-Height detection (in priority order):
-  1. // CANVAS_HEIGHT: <int> comment in the JS file — universal source of truth
-     for ALL library types (Mermaid, Chart.js, Leaflet, vis-network, p5.js, etc.).
-     The iframe height is set to CANVAS_HEIGHT + 2 (2px for the iframe border).
-  2. vis-network: container height from JS + 80px for info panel/legend
-  3. p5.js: createCanvas() height + 2px, or named height variables + 2px
+Height detection (in priority order — CANVAS_HEIGHT, then iframe = it + 2px):
+  1. // CANVAS_HEIGHT: <int> comment in <sim>.js — primary for sims with a .js.
+  2. "canvasHeight": <int> in metadata.json — the consistent place for sims with
+     NO .js (Mermaid, vis-network, Chart.js, Leaflet, vis-timeline, custom HTML).
+  3. <!-- CANVAS_HEIGHT: <int> --> comment in main.html — back-compat.
+  4. From <sim>.js: vis-network container + 80px, createCanvas() height, or a
+     named height variable.
 
 Usage:
   python3 fix-iframe-heights.py --project-dir /path/to/project --verbose
@@ -17,6 +19,7 @@ Usage:
   python3 fix-iframe-heights.py --project-dir /path/to/project --dry-run
 """
 import argparse
+import json
 import os
 import re
 import glob
@@ -26,16 +29,13 @@ import sys
 def detect_height(sim_dir, sim_name):
     """Detect the correct iframe height for a MicroSim by parsing its JS and HTML."""
     js_path = os.path.join(sim_dir, f'{sim_name}.js')
-    if not os.path.isfile(js_path):
-        return None, 'no JS file'
+    js_content = ''
+    if os.path.isfile(js_path):
+        with open(js_path) as f:
+            js_content = f.read()
 
-    with open(js_path) as f:
-        js_content = f.read()
-
-    # PRIMARY: Look for the universal `// CANVAS_HEIGHT: <int>` comment.
-    # This is the single source of truth for all library types per the
-    # microsim-generator skill spec. The iframe height = CANVAS_HEIGHT + 2
-    # (2px for the iframe border).
+    # PRIMARY: the universal `// CANVAS_HEIGHT: <int>` comment in the .js.
+    # The iframe height = CANVAS_HEIGHT + 2 (2px for the iframe border).
     canvas_height_match = re.search(
         r'^\s*//\s*CANVAS_HEIGHT\s*:\s*(\d+)\s*$',
         js_content,
@@ -44,14 +44,34 @@ def detect_height(sim_dir, sim_name):
     if canvas_height_match:
         return int(canvas_height_match.group(1)) + 2, 'CANVAS_HEIGHT comment + 2px'
 
-    # Detect library type from main.html
+    # FALLBACK for sims with no .js comment: the structured metadata.json field.
+    meta_path = os.path.join(sim_dir, 'metadata.json')
+    if os.path.isfile(meta_path):
+        try:
+            val = json.load(open(meta_path)).get('canvasHeight')
+        except (ValueError, OSError):
+            val = None
+        if isinstance(val, int) and not isinstance(val, bool):
+            return val + 2, 'metadata.json canvasHeight + 2px'
+        if isinstance(val, str) and val.strip().isdigit():
+            return int(val.strip()) + 2, 'metadata.json canvasHeight + 2px'
+
+    # Detect library type from main.html + read a back-compat HTML comment.
     main_html = os.path.join(sim_dir, 'main.html')
     is_vis = False
     if os.path.isfile(main_html):
         with open(main_html) as f:
             html = f.read()
+        html_comment = re.search(
+            r'<!--\s*CANVAS_HEIGHT\s*[:=]\s*(\d+)\s*-->', html, re.IGNORECASE
+        )
+        if html_comment:
+            return int(html_comment.group(1)) + 2, 'main.html CANVAS_HEIGHT + 2px'
         if 'vis-network' in html:
             is_vis = True
+
+    if not js_content:
+        return None, 'no JS file and no metadata/html height'
 
     if is_vis:
         # vis-network: look for height in JS
