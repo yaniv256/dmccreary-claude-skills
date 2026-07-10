@@ -430,7 +430,7 @@ When scoring, consider:
 
 ### 8. venn-diagram-generator
 
-**Skill Location**: `skills/venn-diagram-generator/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/venn-guide.md`
 
 **Primary Use Cases:**
 - Set theory visualizations
@@ -484,7 +484,7 @@ When scoring, consider:
 
 ### 9. bubble-chart-generator
 
-**Skill Location**: `skills/bubble-chart-generator/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/bubble-guide.md`
 
 **Primary Use Cases:**
 - Priority matrices (2x2 grids)
