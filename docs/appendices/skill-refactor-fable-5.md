@@ -138,4 +138,10 @@ A few lessons generalize beyond this one repository:
 - **Archaeology finds real bugs, not just clutter.** A stale frontmatter still naming a retired skill, a documented feature with no implementation behind it, reference files no skill actually loaded — none of these were "consolidation opportunities" in the abstract; they were live defects that a careful read-before-merge process caught and fixed as a side effect of the reorganization.
 - **Delegating a large refactor to an agent doesn't mean losing the ability to review it.** Structured scoping questions before planning, a complete written plan before any code changes, and a phase boundary at every commit turned what could have been one opaque mega-diff into a sequence anyone could stop, question, or revert at any point — and one point in that sequence *was* stopped and redirected, when the human explicitly approved deleting a broken guide the agent had originally only flagged rather than removed.
 
+## Fable 5 Token Costs
+
+This entire 8 phase refactor used only 23% of my Fable 5 tokens in my 5-hour window.
+It is difficult to calculate exactly how many tokens were used since Anthropic
+seems to scale token budgets based on supply and demand.
+
 *Session log: [`logs/skill-refactor-by-fable-5.md`](https://github.com/dmccreary/claude-skills/blob/main/logs/skill-refactor-by-fable-5.md) — the complete phase-by-phase engineering record, including the full approved plan document, every commit hash, and the outstanding follow-up items.*
