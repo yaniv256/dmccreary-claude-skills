@@ -57,14 +57,15 @@ Skill tool. **Bold gates** must pass before continuing.
 
 | Order | Skill | Produces | Notes |
 |-------|-------|----------|-------|
-| 0.1 | `init-textbook` | `mkdocs.yml`, `docs/` tree, license, starter `index.md`/`about.md`/`course-description.md`, social hook | Run **first**, in a near-empty directory. Refuses if `mkdocs.yml` already exists. |
-| 0.2 | `book-installer` | Optional features layered onto the scaffold (math, mascot, learning-graph-viewer, document-status, etc.) | Run **many times**, as needed. Install **learning-graph-viewer** before Phase 1 visualizations and **book-metrics** before Phase 7. |
+| 0.1 | `book-installer` → init-textbook (feature 0) | `mkdocs.yml`, `docs/` tree, license, starter `index.md`/`about.md`/`course-description.md`, social hook | Run **first**, in a near-empty directory. Refuses if `mkdocs.yml` already exists. |
+| 0.2 | `book-installer` (other features) | Optional features layered onto the scaffold (math, mascot, learning-graph-viewer, document-status, etc.) | Run **many times**, as needed. Install **learning-graph-viewer** before Phase 1 visualizations and **book-metrics** before Phase 7. |
 
-> **Why these two are special:** `init-textbook` creates the core files every
-> later skill assumes exist (`mkdocs.yml`, `docs/course-description.md`,
-> `docs/learning-graph/`, `docs/chapters/`, `docs/sims/`). `book-installer` is
-> a dispatcher that layers optional features on top. Skipping Phase 0 breaks
-> every downstream skill, because they read and write into this structure.
+> **Why Phase 0 is special:** the feature-0 scaffold creates the core files
+> every later skill assumes exist (`mkdocs.yml`, `docs/course-description.md`,
+> `docs/learning-graph/`, `docs/chapters/`, `docs/sims/`). The rest of
+> `book-installer` is a dispatcher that layers optional features on top.
+> Skipping Phase 0 breaks every downstream skill, because they read and write
+> into this structure.
 
 ### Phase 1 — Knowledge model
 
@@ -84,17 +85,17 @@ Skill tool. **Bold gates** must pass before continuing.
 | Order | Skill | Reads | Writes | **Gate** |
 |-------|-------|-------|--------|----------|
 | 3.1 | `chapter-content-generator` | chapter outlines, `learning-graph.json`, glossary (optional) | populated `docs/chapters/*/index.md` | **Edge-direction validation** (again) before writing |
-| 3.2 | `chapter-image-enhancer` *(optional)* | chapter markdown | freely-licensed images + attribution | Enrich text-heavy chapters |
+| 3.2 | `book-media-generator` → chapter-images *(optional)* | chapter markdown | freely-licensed images + attribution | Enrich text-heavy chapters |
 
 ### Phase 4 — Visualizations (interleave with or follow Phase 3)
 
 | Order | Skill | Use for |
 |-------|-------|---------|
 | 4.1 | `microsim-generator` | Interactive sims (p5.js, Chart.js, Plotly, vis-network, Mermaid, timeline, map, Venn, …) — routes by type |
-| 4.2 | `interactive-infographic-overlay` | Labeled diagrams: callout markers or grid zones over a scientific illustration |
-| 4.3 | `causal-loop-diagram-generator` | Full systems-thinking **article** with multiple linked feedback loops |
-| 4.4 | `verified-infographic-generator` | Fact-checked statistics poster (claims verified against sources first) |
-| 4.5 | `concept-classifier` | Scenario-classification quiz MicroSim |
+| 4.2 | `microsim-generator` → infographic-overlay | Labeled diagrams: callout markers or grid zones over a scientific illustration |
+| 4.3 | `microsim-generator` → causal-loop | Full systems-thinking **article** with multiple linked feedback loops |
+| 4.4 | `book-media-generator` → verified-infographic | Fact-checked statistics poster (claims verified against sources first) |
+| 4.5 | `microsim-generator` → concept-classifier | Scenario-classification quiz MicroSim |
 | 4.6 | `microsim-utils` | **QA each new sim**: `layout-reviewer` (Claude Vision) then `iframe-tester` (Playwright); also screenshots + index page |
 
 ### Phase 5 — Supporting content
@@ -111,20 +112,20 @@ Skill tool. **Bold gates** must pass before continuing.
 | Order | Skill | Produces | Notes |
 |-------|-------|----------|-------|
 | 6.1 | `book-installer` → book-metrics | **`docs/learning-graph/book-metrics.json`** | The **single source of truth** for all counts. Phase 7 skills read this — generate it here so README, LinkedIn, and press release report identical numbers. |
-| 6.2 | `diagram-reports-generator` | diagram/MicroSim audit report | Confirms visualization coverage |
+| 6.2 | `microsim-utils` → diagram-reports | diagram/MicroSim audit report | Confirms visualization coverage |
 | 6.3 | `microsim-utils` → standardization | quality scores | Bulk audit of all sims |
 
 ### Phase 7 — Publish & announce
 
 | Order | Skill | Reads | Produces | Notes |
 |-------|-------|-------|----------|-------|
-| 7.1 | `readme-generator` | `book-metrics.json` | `README.md` | Reads the metrics hub — never recounts |
-| 7.2 | `register-book-analytics` | `mkdocs.yml` | GA4 wired into `mkdocs.yml` | First-time analytics setup |
+| 7.1 | `book-publisher` → readme | `book-metrics.json` | `README.md` | Reads the metrics hub — never recounts |
+| 7.2 | `book-installer` → google-analytics (feature 25) | `mkdocs.yml` | GA4 wired into `mkdocs.yml` | First-time analytics setup |
 | 7.3 | **Deploy** | — | live GitHub Pages site | `mkdocs gh-deploy` |
-| 7.4 | `linkedin-announcement-generator` | `book-metrics.json` | LinkedIn post | Reads the same hub |
-| 7.5 | `press-release-generator` | `book-metrics.json` | AP-style press release | Reads the same hub |
-| 7.6 | `textbook-to-presentation-generator` *(optional)* | chapters | `.pptx` lecture deck | For classroom delivery |
-| 7.7 | `story-generator` *(optional)* | topic | graphic-novel narrative + panels | Enrichment for a Stories section |
+| 7.4 | `book-publisher` → linkedin-post | `book-metrics.json` | LinkedIn post | Reads the same hub |
+| 7.5 | `book-publisher` → press-release | `book-metrics.json` | AP-style press release | Reads the same hub |
+| 7.6 | `book-media-generator` → pptx-lecture *(optional)* | chapters | `.pptx` lecture deck | For classroom delivery |
+| 7.7 | `book-media-generator` → story *(optional)* | topic | graphic-novel narrative + panels | Enrichment for a Stories section |
 
 ## Step 3: Recommend the next action
 
@@ -140,10 +141,10 @@ it must clear, e.g.:
 
 If the user wants the shortest route to a deployable book, collapse to:
 
-`init-textbook` → `course-description-analyzer` (≥85) → `learning-graph-generator`
-(DAG) → `book-chapter-generator` → `chapter-content-generator` →
-`glossary-generator` → `quiz-generator` → `book-installer` (book-metrics) →
-`readme-generator` → **deploy**.
+`book-installer` (feature 0 scaffold) → `course-description-analyzer` (≥85) →
+`learning-graph-generator` (DAG) → `book-chapter-generator` →
+`chapter-content-generator` → `glossary-generator` → `quiz-generator` →
+`book-installer` (book-metrics) → `book-publisher` (readme) → **deploy**.
 
 ## Rules for this command
 
@@ -152,6 +153,6 @@ If the user wants the shortest route to a deployable book, collapse to:
   `book-metrics.json` before Phase 7), say so and point back to the step that
   produces it.
 - **Phase 0 is mandatory.** If `mkdocs.yml` is absent, the only valid next step
-  is `init-textbook`.
+  is `book-installer` feature 0 (the init-textbook scaffold).
 - Keep the "you are here" summary short; link each skill by name so the user can
   invoke it directly.

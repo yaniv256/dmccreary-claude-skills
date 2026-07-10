@@ -19,39 +19,32 @@ not use concepts in a chapter that have not been introduced yet.
 
 ```
 claude-skills/
-├── skills/                          # Active skill definitions
-│   ├── archived/                    # Archived skills (consolidated into meta-skills)
+├── skills/                          # Active skill definitions (14 loaded skills)
+│   ├── archived/                    # Verbatim originals of consolidated skills (never loaded; see its README alias map)
 │   │
-│   │ # Meta-Skills (consolidate multiple sub-skills)
-│   ├── book-installer/              # Routes to: mkdocs-template, learning-graph-viewer, skill-tracker, book-metrics, etc.
-│   ├── microsim-generator/          # Routes to: p5, chartjs, timeline, map, vis-network, mermaid, etc.
-│   ├── microsim-utils/              # Routes to: standardization, screen-capture, add-icons, index-generator, iframe-tester, layout-reviewer
+│   │ # Meta-Skills (routers with references/ guides)
+│   ├── book-installer/              # Infrastructure: init-textbook scaffold (feature 0), 40 features incl. Google Analytics, book-metrics
+│   ├── microsim-generator/          # MicroSims: p5, chartjs, timeline, map, vis-network, mermaid, causal-loop, concept-classifier, infographic-overlay, docker-python-lab, …
+│   ├── microsim-utils/              # MicroSim QA: standardization, screen-capture, index-generator, iframe tools, layout-reviewer, diagram-reports
+│   ├── book-media-generator/        # Media: MARP web decks, .pptx lectures, stories, verified infographics, chapter images, TTS + pronounce buttons
+│   ├── book-publisher/              # Promotion: README, LinkedIn post, LinkedIn carousel, press release (all read book-metrics.json)
 │   │
-│   │ # Book Generation Skills
-│   ├── book-chapter-generator/      # Designs chapter structure from learning graph
-│   ├── chapter-content-generator/   # Generates detailed chapter content
+│   │ # Content-Pipeline Skills (kept separate — complex workflows)
 │   ├── course-description-analyzer/ # Validates course descriptions
-│   ├── diagram-reports-generator/   # Creates diagram/MicroSim reports
-│   ├── faq-generator/              # Generates FAQs from course content
+│   ├── learning-graph-generator/   # Generates 200-concept learning graphs (+ analyze/convert/taxonomy scripts)
+│   ├── book-chapter-generator/      # Designs chapter structure from learning graph
+│   ├── chapter-content-generator/   # Generates detailed chapter content (canonical blooms-taxonomy.md lives here)
 │   ├── glossary-generator/         # Creates ISO 11179-compliant glossaries
-│   ├── learning-graph-generator/   # Generates 200-concept learning graphs
-│   │   ├── SKILL.md               # Skill definition and workflow
-│   │   ├── analyze-graph.py       # Validates DAG structure and quality
-│   │   ├── csv-to-json.py         # Converts CSV to vis-network JSON
-│   │   ├── add-taxonomy.py        # Adds taxonomy column to CSV
-│   │   └── taxonomy-distribution.py # Generates taxonomy reports
-│   ├── linkedin-announcement-generator/ # Creates LinkedIn posts for books
-│   ├── marp-generator/              # Generates MARP slide decks (docs/slides/)
+│   ├── faq-generator/              # Generates FAQs from course content
 │   ├── quiz-generator/             # Generates Bloom's Taxonomy-aligned quizzes
-│   ├── readme-generator/           # Creates GitHub README files
 │   ├── reference-generator/        # Generates curated reference lists
 │   │
-│   │ # Specialized Skills
-│   └── concept-classifier/         # Creates classification quiz MicroSims
+│   │ # Standalone
+│   └── docx-to-web-publisher/      # .docx → Next.js content-catalog pages (non-MkDocs)
 │
 ├── docs/                          # MkDocs documentation site
 ├── scripts/                       # Utility scripts
-│   └── bk-install-skills         # Creates symlinks to ~/.claude/skills/
+│   └── bk-install-skills         # Creates symlinks to ~/.claude/skills/ (skips archived/)
 ├── commands/                      # Slash commands
 │   ├── ibook.md                  # /ibook runbook command
 │   └── skills.md                 # /skills command definition
@@ -79,9 +72,11 @@ Claude Code has a **maximum limit of 30 skills** that can be loaded at once. To 
 
 | Meta-Skill | Sub-Skills (in `references/` folder) | Purpose |
 |------------|--------------------------------------|---------|
-| `book-installer` | mkdocs-template, learning-graph-viewer, skill-tracker, book-metrics, and many more (see its routing table) | Project setup, infrastructure, and book reporting |
-| `microsim-generator` | p5, chartjs, timeline, map, vis-network, mermaid, plotly, venn, bubble, causal-loop, comparison-table, celebration | Creates MicroSims with various JS libraries |
-| `microsim-utils` | standardization, screen-capture, add-icons, index-generator, iframe-auto-height, iframe-tester, layout-reviewer | MicroSim maintenance, QA, and layout review |
+| `book-installer` | init-textbook (feature 0), mkdocs-features, learning-graph-viewer, skill-tracker, google-analytics, book-metrics, and many more (see its routing table) | Project scaffold, infrastructure, and book reporting |
+| `microsim-generator` | p5, chartjs, timeline, map, vis-network, mermaid, plotly, venn, bubble, causal-loop, comparison-table, celebration, concept-classifier, infographic-overlay, docker-python-lab | Creates MicroSims with various JS libraries |
+| `microsim-utils` | standardization, screen-capture, add-icons, index-generator, iframe-auto-height, iframe-tester, layout-reviewer, diagram-reports | MicroSim maintenance, QA, and reports |
+| `book-media-generator` | marp-deck, pptx-lecture, story, verified-infographic, chapter-images, text-to-speech, pronounce-button | Slides, illustrations, sourced images, and audio |
+| `book-publisher` | readme, linkedin-post, linkedin-carousel, press-release | Publishing and promotion (all routes read `docs/learning-graph/book-metrics.json`) |
 
 **How meta-skills work:**
 1. User invokes the meta-skill (e.g., `microsim-generator`)
@@ -267,7 +262,7 @@ Session logs document the specification, instructional design decisions, technic
 
 Building an intelligent textbook follows this 12-step process using multiple skills:
 
-1. **Course Description** (`course-description-analyzer`) → 2. **Bloom's Taxonomy Integration** → 3. **Concept Enumeration** (200 concepts) → 4. **Concept Dependencies** (DAG) → 5. **Concept Taxonomy** (`learning-graph-generator`) → 6. **Learning Graph Visualization** (`book-installer` → learning-graph-viewer) → 7. **Chapter Structure** (`book-chapter-generator`) → 8. **Content Generation** (`chapter-content-generator`) → 9. **MicroSim Creation** (`microsim-generator`) → 10. **Supporting Content** (`glossary-generator`, `faq-generator`, `quiz-generator`) → 11. **Quality Assurance** (`book-installer` → book-metrics, `microsim-utils`) → 12. **Deployment** (mkdocs gh-deploy)
+1. **Course Description** (`course-description-analyzer`) → 2. **Bloom's Taxonomy Integration** → 3. **Concept Enumeration** (200 concepts) → 4. **Concept Dependencies** (DAG) → 5. **Concept Taxonomy** (`learning-graph-generator`) → 6. **Learning Graph Visualization** (`book-installer` → learning-graph-viewer) → 7. **Chapter Structure** (`book-chapter-generator`) → 8. **Content Generation** (`chapter-content-generator`) → 9. **MicroSim Creation** (`microsim-generator`) → 10. **Supporting Content** (`glossary-generator`, `faq-generator`, `quiz-generator`) → 11. **Quality Assurance** (`book-installer` → book-metrics, `microsim-utils`) → 12. **Deployment** (mkdocs gh-deploy) → 13. **Publish & Announce** (`book-publisher`: README, LinkedIn, press release)
 
 ## Common Development Tasks
 
