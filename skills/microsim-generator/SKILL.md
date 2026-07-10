@@ -1,6 +1,6 @@
 ---
 name: microsim-generator
-description: Creates interactive educational MicroSims using the best-matched JavaScript library (p5.js, Chart.js, Plotly, Mermaid, vis-network, vis-timeline, Leaflet, Venn.js). Analyzes user requirements to route to the appropriate visualization type and generates complete MicroSim packages with HTML, JavaScript, CSS, documentation, screen capture, and metadata.
+description: Creates interactive educational MicroSims, routing to the best-matched generator - p5.js, Chart.js, Plotly, Mermaid, vis-network, timelines, maps, Venn, causal-loop/feedback-loop diagrams (CLD), concept-classifier sorting quizzes, infographic overlays with callout labels, and Docker Python labs (runnable code blocks). Generates complete MicroSim packages with HTML, JavaScript, CSS, documentation, and metadata.
 model: opus
 ---
 
@@ -8,7 +8,7 @@ model: opus
 
 ## Overview
 
-This meta-skill routes MicroSim creation requests to the appropriate specialized generator based on visualization requirements. It consolidates 14 individual MicroSim generator skills into a single entry point with on-demand loading of specific implementation guides.
+This meta-skill routes MicroSim creation requests to the appropriate specialized generator based on visualization requirements. It consolidates 17 individual MicroSim generator skills into a single entry point with on-demand loading of specific implementation guides.
 
 Six Python batch utilities in `src/microsim-utils/` automate the repetitive parts of MicroSim generation (parsing specs, scaffolding files, inserting iframes, fixing iframe heights, validating quality, updating navigation), saving ~430K tokens per batch run. The agent's creative work is focused on writing the `.js` file.
 
@@ -268,10 +268,13 @@ Scan the spec for trigger keywords and match to the appropriate generator guide.
 | venn, sets, overlap, intersection, union, categories | `references/venn-guide.md` | Custom |
 | chart, bar, line, pie, doughnut, radar, statistics, data | `references/chartjs-guide.md` | Chart.js |
 | bubble, priority, matrix, quadrant, impact vs effort, risk vs value | `references/bubble-guide.md` | Chart.js |
-| causal, feedback, loop, systems thinking, reinforcing, balancing | `references/causal-loop-guide.md` | vis-network |
+| causal, feedback, loop, systems thinking, reinforcing, balancing, CLD, systems archetype | `references/causal-loop-guide.md` | vis-network |
 | comparison, table, ratings, stars, side-by-side, features | `references/comparison-table-guide.md` | Custom |
 | matrix, framework comparison, clickable cells, detail panel, expandable | `references/html-table.md` | Custom |
 | animation, celebration, particles, confetti, effects | `references/celebration-guide.md` | p5.js |
+| classify, classifier, categorize, sort scenarios, identify types, recognize patterns | `references/concept-classifier-guide.md` | p5.js |
+| diagram overlay, callout labels, anatomy, labeled illustration, infographic overlay, explore/quiz modes | `references/infographic-overlay-guide.md` | Custom (diagram.js) |
+| python lab, code runner, runnable code block, interactive python exercise, docker | `references/docker-python-lab-guide.md` | Custom (docker-lab.js) |
 | custom, simulation, physics, interactive, bouncing, movement, p5.js | `references/p5-guide.md` | p5.js |
 
 #### Decision Tree
@@ -309,6 +312,15 @@ Matrix comparison with clickable cells/detail panels?
 
 Celebration/particles/visual feedback?
   → YES: celebration-guide.md
+
+Students classify scenarios into categories (sorting quiz)?
+  → YES: concept-classifier-guide.md
+
+Labeled illustration with interactive callout markers or hover zones?
+  → YES: infographic-overlay-guide.md
+
+Runnable Python code block executed in Docker?
+  → YES: docker-python-lab-guide.md
 
 Custom simulation/animation/physics?
   → YES: p5-guide.md
@@ -799,10 +811,13 @@ python3 $UTILS/extract-sim-specs.py \
 | plotly-guide | Plotly.js | Mathematical function plots |
 | venn-guide | Custom | Set relationships (2-4 sets) |
 | bubble-guide | Chart.js | Priority matrices, multi-dimensional data |
-| causal-loop-guide | vis-network | Systems thinking, feedback loops |
+| causal-loop-guide | vis-network | Systems thinking, feedback loops, multi-loop CLD articles |
 | comparison-table-guide | Custom | Side-by-side comparisons with ratings |
 | html-table | Custom | Matrix comparisons with clickable cells, detail panels |
 | celebration-guide | p5.js | Particle effects, visual feedback |
+| concept-classifier-guide | p5.js | Classification quizzes — sort scenarios into categories |
+| infographic-overlay-guide | Custom (diagram.js) | Interactive callout/zone overlays on illustrations |
+| docker-python-lab-guide | Custom (docker-lab.js) | Runnable Python labs in Docker containers |
 
 ### Shared Standards
 
@@ -874,6 +889,26 @@ This enables counting and discovery of MicroSims across GitHub using code search
 ### Example 5: Chapter Batch
 **User:** "Generate MicroSims for chapter 11"
 **Action:** Step 0 → Step 1 → Step 2 → Step 3-4 (loop per sim) → Step 5 → Step 6 → Step 6B → Step 6C → Step 7
+
+### Example 6: Classification Quiz
+**User:** "Create a quiz where students identify which cognitive bias each scenario shows"
+**Routing:** Keywords "identify", "classify scenarios" → `references/concept-classifier-guide.md`
+**Action:** Read concept-classifier-guide.md and follow its workflow
+
+### Example 7: Causal Loop Article
+**User:** "Show the feedback loops in supply chain bullwhip"
+**Routing:** Keywords "feedback loops" → `references/causal-loop-guide.md`
+**Action:** Read causal-loop-guide.md; full article if requested, single inline CLD otherwise
+
+### Example 8: Labeled Diagram Overlay
+**User:** "Make an interactive anatomy diagram of a moss sporophyte with labeled structures"
+**Routing:** Keywords "anatomy", "labeled" → `references/infographic-overlay-guide.md`
+**Action:** Read infographic-overlay-guide.md and follow the callout workflow
+
+### Example 9: Python Lab
+**User:** "Add a runnable Python lab about list operations to this page"
+**Routing:** Keywords "runnable", "Python lab" → `references/docker-python-lab-guide.md`
+**Action:** Read docker-python-lab-guide.md and follow its workflow
 
 ## Reference Files
 

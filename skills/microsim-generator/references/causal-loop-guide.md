@@ -1,156 +1,117 @@
----
-name: causal-loop-microsim-generator
-description: This skill generates interactive Causal Loop Diagram (CLD) MicroSims using the vis-network JavaScript library. Use this skill when users need to create causal loop diagrams for systems thinking education, showing feedback loops, reinforcing and balancing dynamics. The skill creates a complete MicroSim package with index.md, main.html, JavaScript, JSON data, and CSS files in the /docs/sims/ directory. This skill should be used when users request creating CLDs, causal diagrams, feedback loop visualizations, or systems thinking diagrams.
----
+# Causal Loop Diagram (CLD) Generator Guide
 
-# Causal Loop MicroSim Generator
+> Formerly the standalone skill `causal-loop-diagram-generator`. This guide supersedes
+> the earlier single-sim causal-loop guide: it builds complete multi-loop CLD
+> **articles**, and scales down to a single inline diagram when that is all the
+> user needs.
 
-## Overview
+This guide produces a complete, working multi-CLD article for an MkDocs Material site. The output is a set of files that together render an article where each section discusses one feedback loop and shows it as an interactive draggable diagram, building up to a full-system view at the end.
 
-This skill generates interactive Causal Loop Diagram (CLD) MicroSims for educational purposes in systems thinking. CLDs visualize cause-and-effect relationships, feedback loops, and system dynamics using nodes (variables) and edges (causal relationships with positive or negative polarity).
+## What the user gets
 
-## When to Use This Skill
+When invoked on a topic (say, "make me a CLD article about supply chain bullwhip"), the workflow produces:
 
-Use this skill when users request:
-- Creating a causal loop diagram
-- Visualizing feedback loops
-- Building systems thinking diagrams
-- Generating CLD visualizations
-- Creating reinforcing or balancing loop diagrams
-- Building system dynamics visualizations
+1. **One JSON file per loop** (`docs/sims/cld-viewer/examples/<id>-cld.json`) — usually 3–5 nodes each, one per archetype loop in the topic.
+2. **One full-system JSON** combining all loops around a shared central node.
+3. **The article markdown** (`docs/articles/<slug>.md`) — progressive build-up, one section per loop, with inline interactive diagrams and a fullscreen-button per diagram.
+4. **The shared infrastructure** (`docs/articles/cld-inline.js`, `docs/sims/cld-viewer/`) if not already present in the project.
+5. **Updated `mkdocs.yml`** nav entries.
 
-## Workflow
+Every diagram is a live vis-network instance the reader can drag, zoom, and click to inspect. Not a static image.
 
-### Step 1: Gather Requirements
+## When to use this guide
 
-Collect the following information from the user:
-1. **MicroSim name** (kebab-case, e.g., `ai-flywheel`, `climate-feedback`)
-2. **Title** for the diagram
-3. **Description** of the system being modeled
-4. **Nodes** (variables in the system) with their labels and descriptions
-5. **Edges** (causal relationships) with polarity (positive/negative)
-6. **Loops** (reinforcing R or balancing B) with descriptions
+Trigger on requests for any of:
 
-If the user provides a text description, parse it to identify:
-- Key variables (become nodes)
-- Causal relationships (become edges with polarity)
-- Feedback loops (reinforcing or balancing)
+- "Make a causal loop diagram for X"
+- "Write an article about [the runaway dynamic in X]"
+- "Show the feedback loops in X"
+- "Add a CLD article to my site"
+- A topic that has one or more reinforcing loops competing with balancing ones (AI race, virality, addiction, supply chain bullwhip, market dynamics, climate, organizational dysfunction)
 
-### Step 2: Generate the MicroSim Files
+If the user just wants a single quick diagram — not an article — generate just one CLD JSON and embed it inline; skip the article structure.
 
-Create the following directory structure in `/docs/sims/{{MICROSIM_NAME}}/`:
+## High-level workflow
+
+1. **Understand the system.** Ask clarifying questions if the topic is ambiguous, but a single sentence is usually enough to draft a plausible loop set. List the candidate reinforcing loops (R1, R2, …) and balancing loops (B1, B2, …) before writing any JSON. Show the list to the user and confirm before generating files.
+
+2. **Verify the project layout.** Determine the project root (look for `mkdocs.yml`). Confirm or create:
+   - `docs/articles/` (article location)
+   - `docs/sims/cld-viewer/examples/` (CLD JSON location)
+   - `docs/articles/cld-inline.js` (inline renderer)
+   - `docs/sims/cld-viewer/main.html` + `cld-viewer.js` + the four R/B PNGs (fullscreen viewer)
+
+3. **Port missing assets.** Copy the bundled assets from `assets/causal-loop/` in this skill if any are missing. See the "Bundled assets" section below for the exact file map.
+
+4. **Generate one JSON per loop.** Read [cld-json-schema.md](cld-json-schema.md) and [cld-layout-templates.md](cld-layout-templates.md). Use the 3-node triangle template for simple loops, 4-node diamond for richer ones, hub-and-spoke for the full system.
+
+5. **Write the article.** Follow [cld-article-structure.md](cld-article-structure.md) — frontmatter, lead, anchor example, R-loops, B-loops, status table, full system, leverage point, signals, bottom line. Required `<style>` and `<script src="../cld-inline.js">` block at the bottom.
+
+6. **Update `mkdocs.yml`.** Add a nav entry for the new article. If `cld-viewer/index.md` doesn't exist yet, add it under MicroSims.
+
+7. **Read [cld-pitfalls.md](cld-pitfalls.md) before changing anything in `cld-inline.js`, `cld-viewer.js`, or the rendering setup.** Nine specific footguns are documented — they each cost real debugging hours to find. The most important one: never use one iframe per inline diagram; both Chrome and Firefox silently fail to render past the 5th–6th iframe on a single page, and there is no client-side workaround.
+
+## Bundled assets
+
+Everything you need to install into a fresh project lives in this skill's `assets/causal-loop/`:
 
 ```
-{{MICROSIM_NAME}}/
-├── index.md           # Documentation page
-├── main.html          # HTML container
-├── {{MICROSIM_NAME}}.js   # JavaScript code using vis-network
-├── data.json          # Node and edge data
-└── style.css          # Custom CSS styles
+assets/causal-loop/
+├── cld-inline.js                  # Inline vis-network renderer for article pages.
+│                                  # Copy to: docs/articles/cld-inline.js
+└── cld-viewer/
+    ├── main.html                  # Fullscreen viewer page (used by the iframe
+    │                              # buttons in the article). Has menu mode for
+    │                              # sample buttons + Save/Copy positions.
+    ├── cld-viewer.js              # Fullscreen viewer's JS — loads JSON, renders
+    │                              # network, handles drag/zoom/save.
+    ├── reinforcing-loop-cw.png    # R/B archetype icons referenced in the
+    ├── reinforcing-loop-ccw.png   # systems-thinking schema. Optional but copy
+    ├── balancing-loop-cw.png      # them through if the project will use loop
+    ├── balancing-loop-ccw.png     # iconography.
+    └── examples/
+        ├── ai-flywheel-cld.json           # 4-node diamond, single reinforcing loop.
+        ├── runaway-hypothesis-cld.json    # 3-node triangle, single reinforcing loop.
+        └── winner-takes-all-cld.json      # 17 nodes, 8 loops, hub-and-spoke.
+                                           # Use as a model for full-system diagrams.
 ```
 
-### Step 3: File Generation Details
+## Reference docs
 
-#### 3.1 data.json
+Loaded as needed, in roughly this order:
 
-Generate the JSON data file following the CLD schema. Refer to `assets/rules.md` for the complete JSON schema and best practices.
+- **[cld-json-schema.md](cld-json-schema.md)** — the CLD JSON format. Read first when generating loops.
+- **[cld-layout-templates.md](cld-layout-templates.md)** — coordinate templates for 3-, 4-, 5-node loops and for hub-and-spoke. Read when placing nodes.
+- **[cld-article-structure.md](cld-article-structure.md)** — section-by-section template for the article markdown, including the required `<style>` + `<script>` boilerplate. Read when writing the article.
+- **[cld-pitfalls.md](cld-pitfalls.md)** — nine documented footguns with symptoms, root causes, and solutions. Read before modifying any rendering code or attempting an iframe-based design.
 
-Key structure:
-```json
-{
-  "metadata": {
-    "id": "{{MICROSIM_NAME}}-cld",
-    "title": "Title",
-    "archetype": "archetype-name",
-    "description": "Description",
-    "version": "1.0.0"
-  },
-  "nodes": [...],
-  "edges": [...],
-  "loops": [...]
-}
-```
+## Default loop count
 
-**Node positioning guidelines:**
-- Canvas center is approximately (300, 300)
-- Space nodes 150-200 pixels apart
-- Arrange nodes in a logical flow (clockwise for reinforcing, counter-clockwise for balancing)
-- For 4-node loops: use positions like (300,150), (450,300), (300,450), (150,300)
+When the user gives only a topic and asks for "a CLD article," default to:
 
-#### 3.2 main.html
+- 1 anchor example (the canonical loop everyone agrees on)
+- 3–4 reinforcing loops (the runaway dynamics)
+- 3–4 balancing loops (the constraints)
+- 1 full-system diagram
 
-Create the HTML file using the template in `assets/templates/main.html`. The HTML should:
-- Load vis-network from CDN
-- Include the CSS file
-- Reference the JavaScript file
-- Have a container div for the network
+That's 8–10 diagrams total, matching the reference Winner-Takes-All article. If the topic has fewer real dynamics, scale down — don't pad. If the user asks for "a quick diagram" or "just one loop," produce one CLD JSON and a single inline embed; skip the article scaffolding entirely.
 
-#### 3.3 {{MICROSIM_NAME}}.js
+## Naming conventions
 
-Generate JavaScript using vis-network library. Refer to `assets/templates/microsim.js` for the template.
+- CLD ids: lowercase, hyphenated, ending in `-cld`. Example: `bullwhip-amplification-cld`.
+- Article slug: short, hyphenated, descriptive. Example: `supply-chain-bullwhip.md`.
+- Loop labels: `R1: Recursive Self-Improvement`, `B1: Compute Constraint`. Always use `R<n>` for reinforcing and `B<n>` for balancing.
 
-Key features to implement:
-- Load data from data.json
-- Configure node appearance (box shape, colors, fonts)
-- Configure edge appearance (arrows, polarity colors: green for +, red for -)
-- Disable physics for manual positioning
-- Add click handlers for showing details
-- Support URL parameters for iframe embedding
+## What NOT to do
 
-#### 3.4 style.css
+- **Do not embed diagrams as iframes inline in the article.** Use `<div class="cld-inline">` and the inline renderer. See [cld-pitfalls.md](cld-pitfalls.md) #1.
+- **Do not use mermaid, ASCII art, or static images** for the loops. The whole point of this guide is interactive vis-network diagrams readers can drag.
+- **Do not soften the `border: 2px solid blue`** on iframes or `.cld-inline` divs. It's the project-wide MicroSim standard signaling interactive content. See [cld-pitfalls.md](cld-pitfalls.md) #8.
+- **Do not modify the global `iframe` CSS rule** in `extra.css` to "look nicer." Same reason.
+- **Do not skip the `<script src="../cld-inline.js">` tag** at the bottom of the article. Without it, every `<div class="cld-inline">` is an empty bordered box.
 
-Create CSS for the MicroSim layout. Use the template in `assets/templates/style.css`.
+## Confirming with the user
 
-#### 3.5 index.md
+After you've drafted the loop list (step 1) but *before* generating files, show the user the proposed loop set with one-line descriptions. They almost always have an opinion on which loops to include and what to call them, and it's much cheaper to revise the list than to revise 8 JSON files.
 
-Create the documentation page with:
-- Title and description
-- Learning objectives
-- Iframe embed of the MicroSim
-- Link to full-screen version
-- Explanation of the system dynamics
-
-### Step 4: Update mkdocs.yml
-
-Add the new MicroSim to the navigation in `mkdocs.yml`:
-
-1. Find the `MicroSims:` section in the nav
-2. Add a new entry in **alphabetical order**: `- {{Title}}: sims/{{MICROSIM_NAME}}/index.md`
-
-**Important:** Maintain alphabetical ordering of all MicroSim entries.
-
-### Step 5: Remind User About Screenshot
-
-After generating all files, remind the user:
-
-> **Screenshot Required:** Please take a screenshot of the MicroSim and save it as `{{MICROSIM_NAME}}.png` in the `/docs/sims/{{MICROSIM_NAME}}/` directory. This image will be used for social sharing and documentation.
-
-## CLD Design Best Practices
-
-Refer to `assets/rules.md` for detailed rules on:
-- JSON schema specification
-- Node positioning algorithms
-- Edge polarity and curve directions
-- Loop labeling conventions
-- vis-network configuration options
-
-## Resources
-
-### assets/
-
-- `rules.md` - Comprehensive CLD generation rules and JSON schema
-- `templates/main.html` - HTML template
-- `templates/microsim.js` - JavaScript template
-- `templates/style.css` - CSS template
-- `templates/index.md` - Documentation template
-- `templates/data.json` - Example JSON data structure
-
-## Example Usage
-
-**User request:** "Create a CLD showing how increased AI usage leads to more training data, which improves model accuracy, which increases AI usage."
-
-**Generated MicroSim:**
-- Name: `ai-usage-loop`
-- Nodes: AI Usage, Training Data, Model Accuracy
-- Edges: All positive polarity forming a reinforcing loop
-- Loop: R - AI Improvement Cycle
+After generating, tell the user the file paths, what `mkdocs.yml` changes you made, and remind them they can use the cld-viewer's "Save Positions" button to drag nodes into nicer positions and download an updated JSON.

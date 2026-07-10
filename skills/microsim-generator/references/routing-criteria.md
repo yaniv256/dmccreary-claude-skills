@@ -596,6 +596,67 @@ When scoring, consider:
 
 ---
 
+### 11. causal-loop-generator
+
+**Skill Location**: `skills/microsim-generator/references/causal-loop-guide.md`
+
+**Primary Use Cases:** Causal loop diagrams (CLDs), feedback loops, systems archetypes (reinforcing/balancing loops, limits to growth, tragedy of the commons), multi-loop systems-thinking articles with a full-system view.
+
+**Trigger Words/Phrases:** "causal loop", "CLD", "feedback loop", "reinforcing", "balancing", "systems thinking", "runaway dynamic", "systems archetype"
+
+**Scoring Guidelines:**
+- **Score 90-100 if**: The request names feedback loops, CLDs, or reinforcing/balancing dynamics
+- **Score 50-69 if**: Generic "network of causes" without loop polarity (consider vis-network-guide)
+- **Score 0-29 if**: Static flowcharts (mermaid) or data charts
+
+**Special Note**: Produces vis-network diagrams rendered inline via `cld-inline.js` — never one iframe per diagram (browsers stop rendering past 5–6 iframes per page). Scales from one inline diagram up to a full article.
+
+---
+
+### 12. concept-classifier-generator
+
+**Skill Location**: `skills/microsim-generator/references/concept-classifier-guide.md`
+
+**Primary Use Cases:** Classification quizzes where students read a scenario and sort it into the correct category — bias identification, fallacy spotting, taxonomy sorting, pattern recognition drills.
+
+**Trigger Words/Phrases:** "classify", "classifier", "categorize", "sort scenarios", "identify which", "recognize the type"
+
+**Scoring Guidelines:**
+- **Score 90-100 if**: Students must assign given examples/scenarios to categories from multiple-choice options
+- **Score 50-69 if**: General quiz without a classification framing (use the quiz-generator skill for chapter quizzes instead)
+- **Score 0-29 if**: No student categorization involved
+
+---
+
+### 13. infographic-overlay-generator
+
+**Skill Location**: `skills/microsim-generator/references/infographic-overlay-guide.md`
+
+**Primary Use Cases:** Interactive labeled illustrations — anatomy/structure diagrams with numbered callout markers (explore/quiz/edit modes) or comparison posters with rectangular hover zones, rendered over an AI-generated annotation-free image.
+
+**Trigger Words/Phrases:** "diagram overlay", "callout labels", "labeled diagram", "anatomy", "interactive infographic", "hover to identify", "label the parts"
+
+**Scoring Guidelines:**
+- **Score 90-100 if**: A background illustration needs interactive labels/zones with explore or quiz modes
+- **Score 50-69 if**: The visual could be drawn natively (p5/Chart.js/Mermaid) with no background image
+- **Score 0-29 if**: Pure simulation or data chart
+
+---
+
+### 14. docker-python-lab-generator
+
+**Skill Location**: `skills/microsim-generator/references/docker-python-lab-guide.md`
+
+**Primary Use Cases:** Runnable Python code blocks embedded in textbook pages — code editor, Run/Reset buttons, output area; code executes in an isolated Docker container via a local service.
+
+**Trigger Words/Phrases:** "python lab", "code runner", "runnable code block", "interactive python exercise", "run real Python", "docker lab"
+
+**Scoring Guidelines:**
+- **Score 90-100 if**: Students must execute real Python (full stdlib) on a page, Docker-based (not Skulpt)
+- **Score 0-29 if**: Visualization requests with no code execution
+
+---
+
 ## Matching Strategy
 
 ### Step-by-Step Matching Process
