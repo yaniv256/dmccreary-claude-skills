@@ -47,13 +47,11 @@ claude-skills/
 │   ├── reference-generator/        # Generates curated reference lists
 │   │
 │   │ # Specialized Skills
-│   ├── concept-classifier/         # Creates classification quiz MicroSims
-│   ├── moving-rainbow/             # MicroPython for Raspberry Pi Pico
-│   └── vis-network/                # vis-network specific utilities
+│   └── concept-classifier/         # Creates classification quiz MicroSims
 │
 ├── docs/                          # MkDocs documentation site
 ├── scripts/                       # Utility scripts
-│   └── install-claude-skills.sh  # Creates symlinks to ~/.claude/skills/
+│   └── bk-install-skills         # Creates symlinks to ~/.claude/skills/
 ├── commands/                      # Slash commands
 │   ├── ibook.md                  # /ibook runbook command
 │   └── skills.md                 # /skills command definition
@@ -279,18 +277,13 @@ Building an intelligent textbook follows this 12-step process using multiple ski
 
 **Install skills globally (for all projects):**
 ```bash
-cd scripts
-./install-claude-skills.sh
+export BK_HOME=$HOME/Documents/ws/claude-skills   # if not already set
+scripts/bk-install-skills
 ```
-This creates symlinks from `./skills/*` to `~/.claude/skills/`
+This creates symlinks from `./skills/*` to `~/.claude/skills/` (skipping `skills/archived/`) and removes stale symlinks whose targets no longer exist.
 
 **Install skills for a single project:**
-Edit `install-claude-skills.sh` and change:
-```bash
-$HOME  # from ~/.claude/skills
-# to:
-/path/to/project/.claude/skills
-```
+Edit `bk-install-skills` and change `TARGET_DIR` from `$HOME/.claude/skills` to `/path/to/project/.claude/skills`.
 
 ### Working with Documentation
 
