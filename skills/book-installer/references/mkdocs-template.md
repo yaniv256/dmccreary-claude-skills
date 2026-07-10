@@ -1,76 +1,24 @@
----
-name: install-mkdocs-template
-description: This skill creates a complete MkDocs Material project structure for intelligent textbooks. It sets up a Conda virtual environment named 'mkdocs', installs all dependencies, generates mkdocs.yml with all Material theme options, custom CSS for branding, the social_override plugin for custom social media cards, builds the site, and deploys to GitHub Pages. Use this skill when starting a new intelligent textbook project.
----
-
 # Install MkDocs Template
 
-This skill creates MkDocs Material project structures optimized for intelligent textbooks.
+This guide creates MkDocs Material project structures optimized for intelligent textbooks.
 
 ---
 
-## Simple mkdocs.yml Template (Option 1)
+## Simple mkdocs.yml Template (Option 1) — superseded by Feature #0
 
-For users who just want a minimal starter config without the full project setup.
-
-### Workflow
-
-1. **Gather information** - Ask the user for:
-   - Site name (book title)
-   - Site description
-   - Author name
-   - GitHub username
-   - Repository name
-
-2. **Use the template file** at `assets/templates/mkdocs-minimal.yml` and replace placeholders:
-   - `{{SITE_NAME}}` - Book title
-   - `{{SITE_DESCRIPTION}}` - Brief description
-   - `{{SITE_AUTHOR}}` - Author name
-   - `{{GITHUB_USERNAME}}` - GitHub username
-   - `{{REPO_NAME}}` - Repository name
-
-3. **Create the directory structure** using files from `assets/templates/docs/`:
-   - Copy `index.md`, `about.md`, `course-description.md`, `contact.md`, `license.md`
-   - Create `chapters/` subdirectories with starter chapter files
-   - Replace placeholders in all files
-
-### Minimal Directory Structure
-
-```
-project-root/
-├── docs/
-│   ├── index.md
-│   ├── about.md
-│   ├── course-description.md
-│   ├── contact.md
-│   ├── license.md
-│   └── chapters/
-│       ├── 01-introduction/
-│       │   └── index.md
-│       ├── 02-getting-started/
-│       │   └── index.md
-│       └── 03-core-concepts/
-│           └── index.md
-└── mkdocs.yml
-```
-
-### Install and Run
-
-```bash
-# Install MkDocs (if not already installed)
-pip install mkdocs mkdocs-material
-
-# Serve locally
-mkdocs serve
-```
-
-Then visit http://127.0.0.1:8000/repo-name/
+For a minimal starter config or a brand-new empty directory, **do not use this
+guide**. Load `references/init-textbook.md` (feature #0) instead — it is the
+single canonical scaffold (mkdocs.yml + docs/ tree + license + social-override
+hook), sourced from `assets/init-textbook/`. Keeping one copy of the starter
+templates prevents the two scaffolds from drifting apart.
 
 ---
 
 ## Full Project Setup (Option 2)
 
-For a complete intelligent textbook with all features, continue below.
+Use this workflow only when the user explicitly wants the Conda-based setup
+with the Cairo social-card pipeline. For everything else, feature #0
+(`references/init-textbook.md`) is the recommended starting point.
 
 ## What This Skill Creates
 

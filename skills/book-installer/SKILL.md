@@ -1,6 +1,6 @@
 ---
 name: book-installer
-description: Installs and configures project infrastructure including MkDocs Material intelligent textbook templates, learning graph viewers, and skill tracking systems. Routes to the appropriate installation guide based on what the user needs to set up.
+description: Installs and configures intelligent-textbook infrastructure - scaffold a brand-new MkDocs Material textbook (init textbook), install any of 40 features (math, mascot, learning graph viewer, Google Analytics GA4, custom 404, kanban board), and generate book metrics. Routes to the appropriate installation guide.
 model: sonnet
 license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
 ---
@@ -9,16 +9,17 @@ license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 
 
 ## Overview
 
-This meta-skill handles installation and setup tasks for intelligent textbook projects. It consolidates three installation skills into a single entry point with on-demand loading of specific installation guides.
+This meta-skill handles installation and setup tasks for intelligent textbook projects. It consolidates five installation skills into a single entry point with on-demand loading of specific installation guides.
 
 ## When to Use This Skill
 
 Use this skill when users request:
 
 - Setting up a new MkDocs Material project
-- Creating a new intelligent textbook from scratch
+- Creating a new intelligent textbook from scratch (feature #0 scaffold)
 - Installing a learning graph viewer
 - Setting up skill usage tracking with hooks
+- Registering the book with Google Analytics (GA4 Measurement ID)
 - Bootstrapping project infrastructure
 
 ## Step 1: Handle Help Requests
@@ -28,7 +29,8 @@ If the user asks for "help", "what can you do", or "list features", display this
 ```
 Book Installer Features (most → least common):
 
- 1. Simple mkdocs.yml template - Minimal starter config for new projects
+ 0. New textbook scaffold - complete mkdocs.yml + docs/ tree + license for an empty directory (run once at project birth)
+ 1. Simple mkdocs.yml template - Minimal starter config for new projects (see feature 0)
  2. Site logo - Add custom logo to header
  3. Favicon - Browser tab/bookmark icon
  3b. Generate favicon from mascot - Auto-generate favicon.ico from neutral.png mascot image
@@ -107,8 +109,9 @@ Match the user's request to the appropriate installation guide:
 | Trigger Keywords | Action | Purpose |
 |------------------|--------|---------|
 | help, what can you do, features, capabilities, list features | Display numbered list (Step 1) | Show quick feature overview |
-| init textbook, scaffold textbook, brand new book, empty directory, fresh start | `init-textbook` skill (separate skill) | Bootstrap a brand-new textbook from scratch (mkdocs.yml + docs/ + license + contact) — run this *before* using book-installer features |
-| 1, simple mkdocs, minimal template, starter config | `references/mkdocs-template.md` (minimal section) | Create simple mkdocs.yml starter |
+| init textbook, scaffold textbook, brand new book, empty directory, fresh start, new textbook from scratch, 0 | `references/init-textbook.md` | Bootstrap a brand-new textbook from scratch (mkdocs.yml + docs/ + license + contact + social-override hook) — run this *before* any other feature |
+| 1, simple mkdocs, minimal template, starter config | `references/init-textbook.md` | Canonical scaffold (supersedes the old minimal template) |
+| google analytics, GA4, measurement id, tracking id, G-, analytics property, register analytics, 25 | `references/google-analytics.md` | Create the GA4 property, write the G-* Measurement ID into mkdocs.yml extra.analytics, verify the tag, deploy |
 | enrich, add feature, number 2-24, specific feature name | `references/mkdocs-features.md` | Install specific feature |
 | new project, mkdocs, textbook, bootstrap, setup, template, new book | `references/mkdocs-template.md` | Create new MkDocs Material project |
 | graph viewer, learning graph, visualization, interactive graph, concept viewer | `references/learning-graph-viewer.md` | Add learning graph viewer to existing project |
@@ -146,8 +149,14 @@ Match the user's request to the appropriate installation guide:
 Asking for help or what book-installer can do?
   → YES: Display numbered list directly (Step 1)
 
-Creating a new project/textbook from scratch?
-  → YES: mkdocs-template.md
+Creating a new project/textbook from scratch (empty directory)?
+  → YES: init-textbook.md (feature 0 — the canonical scaffold)
+
+Explicitly want the Conda + Cairo social-card full setup instead?
+  → YES: mkdocs-template.md (Option 2)
+
+Registering the book with Google Analytics (GA4 / G-* Measurement ID)?
+  → YES: google-analytics.md
 
 Adding a learning graph viewer to existing project?
   → YES: learning-graph-viewer.md
@@ -242,9 +251,38 @@ Each guide contains:
 - User wants detailed configuration for a specific feature
 - User has a minimal mkdocs.yml and wants to enrich it
 
+### init-textbook.md (feature 0)
+
+**Purpose:** The canonical scaffold for a brand-new intelligent textbook in an empty directory
+
+**Creates:**
+- mkdocs.yml (side nav, search, admonitions, arithmatex, exclude_docs, schema URI)
+- docs/ tree: index, about, course-description, contact, license, chapters/, learning-graph/, sims/, css/extra.css, img/ (cover + license badge)
+- plugins/social_override.py hook (per-page og:/twitter: image override)
+- .gitignore and VS Code workspace file
+- MicroSim status-indicator plumbing (scaffold/built/approved)
+
+**Templates:** single canonical copy in `assets/init-textbook/`
+
+**Prerequisites:**
+- Empty (or nearly empty) project directory — refuses to overwrite mkdocs.yml, docs/index.md, or docs/license.md
+
+### google-analytics.md (feature 25)
+
+**Purpose:** Register the book as a Google Analytics 4 property and wire the Measurement ID into mkdocs.yml
+
+**Creates:**
+- GA4 property + web data stream (via Claude in Chrome)
+- `extra.analytics` block in mkdocs.yml with the G-* Measurement ID
+- Build-time tag verification, commit, and gh-deploy
+
+**Prerequisites:**
+- Claude in Chrome extension connected; user logged into Google Analytics
+- site_url set in mkdocs.yml
+
 ### mkdocs-template.md
 
-**Purpose:** Bootstrap a complete MkDocs Material intelligent textbook project
+**Purpose:** Bootstrap a complete MkDocs Material intelligent textbook project (legacy full setup — for new projects prefer feature 0 / init-textbook.md)
 
 **Creates:**
 - Conda virtual environment named 'mkdocs'
@@ -598,13 +636,18 @@ See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textb
 
 ### Example 2c: Simple Template
 **User:** "1"
-**Routing:** Number 1 → `references/mkdocs-template.md` (minimal section)
-**Action:** Load mkdocs-template.md and create a simple mkdocs.yml starter config
+**Routing:** Number 1 → `references/init-textbook.md` (canonical scaffold)
+**Action:** Load init-textbook.md and scaffold the starter config and docs/ tree
 
 ### Example 3: New Textbook Project
-**User:** "I want to create a new intelligent textbook about machine learning"
-**Routing:** Keywords "create", "new", "textbook" → `references/mkdocs-template.md`
-**Action:** Read mkdocs-template.md and follow its workflow
+**User:** "I want to create a new intelligent textbook about machine learning" (empty directory)
+**Routing:** Keywords "create", "new", "textbook" → `references/init-textbook.md`
+**Action:** Read init-textbook.md, gather SITE_NAME/SITE_DESCRIPTION, confirm the substitution table, scaffold from `assets/init-textbook/`
+
+### Example 3b: Register Google Analytics
+**User:** "Add Google Analytics to this book" or "25"
+**Routing:** Keywords "google analytics", "GA4", "25" → `references/google-analytics.md`
+**Action:** Read google-analytics.md; create the GA4 property, write the G-* ID into mkdocs.yml extra.analytics, verify the tag, deploy
 
 ### Example 4: Add Graph Viewer
 **User:** "Add an interactive viewer for the learning graph"
@@ -690,13 +733,14 @@ See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textb
 
 ### Full Project Setup
 For a complete new project, users typically run these installations in order:
-1. `mkdocs-template.md` - Create the project structure
+1. `init-textbook.md` - Scaffold the project structure (feature 0)
 2. `cover-image-generator.md` - Generate a high-quality cover image prompt (auto-generation optional, on request)
 3. `home-page-template.md` - Configure home page with cover image metadata
 4. `social-media-preview.md` - Install the og:* / twitter:* meta-tag hook (verify with `bk-check-social-cover`)
 5. `learning-graph-viewer.md` - Add graph visualization (after learning graph exists)
 6. `skill-tracker.md` - Enable usage analytics (optional)
-7. `supplementary-content-generator.md` - Generate all supplementary content once chapters exist (glossary, FAQ, quizzes, references, metrics, about, README)
+7. `google-analytics.md` - Register the book with GA4 (feature 25, optional)
+8. `supplementary-content-generator.md` - Generate all supplementary content once chapters exist (glossary, FAQ, quizzes, references, metrics, about, README)
 
 ### Verification Commands
 
