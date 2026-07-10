@@ -288,7 +288,7 @@ Use `<details markdown="1">` block with a detailed specification
 
 - Diagram Name - A title-case name of the diagram that is unique in the chapter
 - Bloom Taxonomy - one of six levels of the 2001 Bloom Taxonomy: Remember, Understand, Analyze, Create
-- Bloom Taxonomy Verb - one of the verbs from the bloom-taxonomy-verbs.md in the references
+- Bloom Taxonomy Verb - one of the verbs from blooms-taxonomy.md (Part 1) in the references
 - Learning Objective - what concepts are we trying to teach
 - What components/elements should be shown
 - How elements are connected or related

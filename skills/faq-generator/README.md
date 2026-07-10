@@ -196,7 +196,7 @@ faq-generator/
 ├── SKILL.md                              # Main skill instructions
 ├── README.md                             # This file
 └── references/
-    └── blooms-taxonomy-guide.md          # Detailed Bloom's guidance
+    └── (Bloom's guidance now canonical in chapter-content-generator/references/blooms-taxonomy.md)
 ```
 
 ## Example Output
@@ -308,7 +308,7 @@ Generated: 2025-01-31
 
 ### Bloom's Taxonomy Guide
 
-The skill includes comprehensive guidance on Bloom's Taxonomy in `references/blooms-taxonomy-guide.md`. This reference covers:
+The skill uses the canonical Bloom's Taxonomy reference at `$HOME/.claude/skills/chapter-content-generator/references/blooms-taxonomy.md`. This reference covers:
 
 - Detailed descriptions of all 6 cognitive levels
 - Question starters and cognitive actions for each level
