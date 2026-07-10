@@ -15,3 +15,4 @@ rerun the installer.
 | `concept-classifier` | `microsim-generator` → `references/concept-classifier-guide.md` | classify, categorize, sort scenarios, identify types |
 | `interactive-infographic-overlay` | `microsim-generator` → `references/infographic-overlay-guide.md` | diagram overlay, callout labels, anatomy, labeled illustration |
 | `docker-python-lab` | `microsim-generator` → `references/docker-python-lab-guide.md` | python lab, code runner, runnable code block, docker |
+| `diagram-reports-generator` | `microsim-utils` → `references/diagram-reports.md` | diagram report, visualization coverage, audit diagrams/microsims |

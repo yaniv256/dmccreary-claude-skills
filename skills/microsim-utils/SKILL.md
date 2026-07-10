@@ -1,13 +1,13 @@
 ---
 name: microsim-utils
-description: Utility tools for MicroSim management including quality validation, screenshot capture, icon management, index page generation, iframe height synchronization, iframe control-visibility testing, and visual layout review. Routes to the appropriate utility based on the task needed.
+description: Utility tools for MicroSim management including quality validation, screenshot capture, icon management, index page generation, iframe height synchronization, iframe control-visibility testing, visual layout review, and diagram/MicroSim coverage reports across chapters. Routes to the appropriate utility based on the task needed.
 ---
 
 # MicroSim Utilities
 
 ## Overview
 
-This meta-skill provides utility functions for managing and maintaining MicroSims in intelligent textbook projects. It consolidates four utility skills into a single entry point with on-demand loading of specific utility guides.
+This meta-skill provides utility functions for managing and maintaining MicroSims in intelligent textbook projects. It consolidates five utility skills into a single entry point with on-demand loading of specific utility guides.
 
 ## When to Use This Skill
 
@@ -23,6 +23,7 @@ Use this skill when users request:
 - Scaffolding MicroSim directories (main.html, index.md, metadata.json) from TODO JSON specs
 - Testing whether interactive controls are fully visible inside the iframe (Playwright)
 - Reviewing a MicroSim's visual layout for rendering defects (Claude Vision)
+- Auditing diagram/MicroSim coverage across chapters (status, difficulty, Bloom's levels)
 
 ## Step 1: Identify Utility Type
 
@@ -43,6 +44,7 @@ Match the user's request to the appropriate utility guide:
 | iframe auto height, iframe auto resize, iframe postMessage, runtime iframe resize, microsim auto resize, auto-size iframe, iframe self-resize | `references/iframe-auto-height.md` | Runtime postMessage protocol so embedded MicroSims report their own height to the parent page |
 | test iframe, controls clipped, controls cut off, are controls visible, test iframe heights, verify controls fit, check if sims fit, iframe visibility | `references/iframe-tester.md` (runs `scripts/test-iframe-heights.py`) | Playwright check that every interactive control is fully visible inside the iframe at its declared height |
 | review layout, layout review, looks off, looks wrong, clipped labels, overlapping controls, residual stroke, draw order, visual QA, review the sim | `references/layout-reviewer.md` | Claude Vision review of a sim's rendered layout — walks a checklist, diagnoses defects, patches source |
+| diagram report, diagram reports, visualization coverage, audit diagrams, audit microsims, diagram status, microsim status report | `references/diagram-reports.md` (runs `scripts/diagram-report.py`) | Generate status reports of all diagrams/MicroSims across chapters (type, status, Bloom's levels, UI complexity, difficulty) |
 
 ### Decision Tree
 
@@ -76,6 +78,9 @@ Need to verify interactive controls are fully visible inside the iframe?
 
 Need to review whether a sim's rendered layout looks right (not just fits)?
   → YES: references/layout-reviewer.md
+
+Need a status report of all diagrams/MicroSims across chapters?
+  → YES: references/diagram-reports.md (runs scripts/diagram-report.py)
 ```
 
 ### Iframe-height utilities at a glance
