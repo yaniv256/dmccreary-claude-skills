@@ -80,6 +80,7 @@ Both audio routes (`text-to-speech-guide.md`, `pronounce-button-guide.md`) call 
 - `references/pptx-slide-patterns.md`, `references/pptx-speaker-notes-guide.md` — PowerPoint route
 - `references/story-index-template.md`, `scripts/story/` (generate-images.py, verify-images.py, fix-references.py, uncomment-images.sh) — story route
 - `references/infographic-*.{md,yaml}`, `references/poster-image-prompt.md` — infographic route
+- `scripts/posters/generate-poster-thumbnails.py` — poster gallery thumbnail generation (see verified-infographic-guide.md, "Gallery Thumbnails")
 - `references/tts-installation.md`, `references/tts-streaming.md`, `references/tts-voice-settings.md` — TTS route
 - `scripts/audio/generate-pronunciation.py` — pronounce-button route
 
@@ -108,6 +109,11 @@ Both audio routes (`text-to-speech-guide.md`, `pronounce-button-guide.md`) call 
 **User:** "Create an infographic about remote-work productivity statistics"
 **Routing:** "infographic" + statistics → `references/verified-infographic-guide.md`
 **Action:** Read verified-infographic-guide.md; verify every claim before any image prompt
+
+### Example 5b: Poster Gallery Loads Slowly
+**User:** "The poster gallery page takes forever to load"
+**Routing:** existing posters + slow page load → `references/verified-infographic-guide.md`, "Gallery Thumbnails" section
+**Action:** Run `scripts/posters/generate-poster-thumbnails.py --posters-dir docs/posters`; it generates a compressed thumbnail per poster and rewrites the gallery index.md's grid-card images to use them (poster detail pages keep the full-size PNG)
 
 ### Example 6: Pronounce Button
 **User:** "Create a pronounce button for the term Mitochondria"

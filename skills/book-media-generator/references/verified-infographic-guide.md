@@ -185,6 +185,20 @@ If drift is detected, log the specific mismatch, regenerate the image (Phase 7),
 
 Produce the final **sidecar source file** at `docs/posters/<slug>/sources.md` — a reader-facing document listing every claim, number, and full citation with URL, so the poster is independently fact-checkable.
 
+## Gallery Thumbnails
+
+Poster galleries (e.g. `docs/posters/index.md`) typically render every poster as a card in a 3-column CSS grid at ~600px wide. If the grid image points straight at the full-size rendered PNG (1536x1024, 2-3 MB is typical for these image models), a gallery of even 50-90 posters ships hundreds of MB on a single page load — the full resolution is wasted since the grid never displays the image larger than the column width.
+
+**After adding one or more posters to a gallery** (or whenever a user reports the gallery page loading slowly), run:
+
+```bash
+python3 ~/.claude/skills/book-media-generator/scripts/posters/generate-poster-thumbnails.py --posters-dir docs/posters
+```
+
+This generates a `<slug>-thumb.jpg` (900px wide JPEG, quality 82) next to each poster's full-size PNG and rewrites the gallery `index.md` so grid cards reference the thumbnail. It does **not** touch the poster's own detail page — the interactive callout/grid overlay (`main.html`) keeps loading the full-size PNG, since hover/zoom accuracy there benefits from full resolution. Only the gallery-grid reference is swapped.
+
+Measured result on an 86-poster gallery: 233.5 MB → 11.9 MB (~95% reduction), no visible quality loss at gallery-card size. The script is idempotent — safe to re-run any time new posters are added, and `--dry-run` previews the change without writing files.
+
 ## Output Files
 
 For a poster with slug `<slug>`, the skill produces:
@@ -231,3 +245,5 @@ All templates and examples live in the `references/` subdirectory:
 - `layout-spec-template.yaml` — Phase 5 output
 - `image-prompt-template.md` — Phase 6 output
 - `biophilic-design-case-study.md` — worked example
+
+`scripts/posters/generate-poster-thumbnails.py` — gallery thumbnail generation (see "Gallery Thumbnails" above)
