@@ -34,7 +34,7 @@ When scoring, consider:
 
 ### 1. microsim-p5
 
-**Skill Location**: `skills/microsim-p5/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/p5-guide.md`
 
 **Primary Use Cases:**
 - Custom animations and simulations
@@ -82,7 +82,7 @@ When scoring, consider:
 
 ### 2. chartjs-generator
 
-**Skill Location**: `skills/chartjs-generator/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/chartjs-guide.md`
 
 **Primary Use Cases:**
 - Standard statistical charts
@@ -140,7 +140,7 @@ When scoring, consider:
 
 ### 3. math-function-plotter-plotly
 
-**Skill Location**: `skills/math-function-plotter-plotly/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/plotly-guide.md`
 
 **Primary Use Cases:**
 - Mathematical function plots
@@ -199,7 +199,7 @@ When scoring, consider:
 
 ### 4. mermaid-generator
 
-**Skill Location**: `skills/mermaid-generator/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/mermaid-guide.md`
 
 **Primary Use Cases:**
 - Flowcharts and process diagrams
@@ -263,7 +263,7 @@ When scoring, consider:
 
 ### 5. vis-network
 
-**Skill Location**: `skills/vis-network/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/vis-network-guide.md`
 
 **Primary Use Cases:**
 - Network diagrams (nodes and edges)
@@ -319,7 +319,7 @@ When scoring, consider:
 
 ### 6. timeline-generator
 
-**Skill Location**: `skills/timeline-generator/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/timeline-guide.md`
 
 **Primary Use Cases:**
 - Historical timelines
@@ -374,7 +374,7 @@ When scoring, consider:
 
 ### 7. map-generator
 
-**Skill Location**: `skills/map-generator/SKILL.md`
+**Skill Location**: `skills/microsim-generator/references/map-guide.md`
 
 **Primary Use Cases:**
 - Geographic visualizations

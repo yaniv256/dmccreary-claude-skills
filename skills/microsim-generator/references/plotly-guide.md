@@ -514,6 +514,6 @@ function f(x) {
 
 ### MicroSim Standards
 
-- [MicroSim Standardization Skill](../microsim-standardization/SKILL.md) - Quality rubric and requirements
+- [MicroSim Standardization Skill](../../microsim-utils/references/standardization.md) - Quality rubric and requirements
 - [Dublin Core Metadata](https://www.dublincore.org/specifications/dublin-core/dcmi-terms/) - Metadata standards
 - [Plotly.js CDN](https://cdn.plot.ly/) - Latest library versions
