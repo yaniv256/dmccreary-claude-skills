@@ -113,7 +113,7 @@ These are read by the cld-viewer's details panel but skipped by the inline rende
 - `scenarios` — what-if analyses with `title`, `description`, `changes` array, `predicted_outcomes`.
 - `educational_content` — `discussion_questions`, `key_insights`, `common_misconceptions` (each with `misconception` + `correction`), `extension_activities`, `related_concepts`.
 
-See `assets/cld-viewer/examples/winner-takes-all-cld.json` and `ai-flywheel-cld.json` for full examples.
+See `assets/causal-loop/cld-viewer/examples/winner-takes-all-cld.json` and `ai-flywheel-cld.json` for full examples.
 
 ## Validation checklist
 

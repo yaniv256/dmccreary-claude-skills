@@ -96,7 +96,7 @@ W (270°)     left                     (-x, 0)
 NW (315°)    upper-left diagonal      (-x, -y)
 ```
 
-Each loop occupies a sector with the hub node at its inside edge. Place 2–3 supporting nodes per loop along the sector. Reference: [winner-takes-all-cld.json](../assets/cld-viewer/examples/winner-takes-all-cld.json) — 17 nodes, 8 loops, hub at `(0, 0)`.
+Each loop occupies a sector with the hub node at its inside edge. Place 2–3 supporting nodes per loop along the sector. Reference: [winner-takes-all-cld.json](../assets/causal-loop/cld-viewer/examples/winner-takes-all-cld.json) — 17 nodes, 8 loops, hub at `(0, 0)`.
 
 A typical sector spans about 250 world units radially and ±150 tangentially. So an "east" sector with one supporting node at `+250` and a deeper one at `+450`:
 

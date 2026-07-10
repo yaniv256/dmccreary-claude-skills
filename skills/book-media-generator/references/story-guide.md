@@ -30,7 +30,7 @@ The skill accepts an optional `--panels N` argument that controls how many numbe
 
 The user types something like:
 
-> /story-generator The Cache That Wasn't --panels 8
+> book-media-generator (story route): "The Cache That Wasn't" --panels 8
 
 When you receive `--panels N` in the user's invocation, treat N as the canonical panel count for the rest of the workflow. If no `--panels` argument is given, default to 12.
 
@@ -100,7 +100,7 @@ Save the story ideas to `docs/stories/story-ideas.md` using this format:
 These mini-graphic novel ideas are designed to inspire young
 readers by connecting the subject matter of this textbook to
 the real people who shaped the field. Each story can be
-generated using the `/story-generator` skill, with the
+generated using the book-media-generator story route, with the
 suggested panel count or your own override via `--panels N`.
 
 ## Selection Criteria
@@ -138,7 +138,7 @@ Stories were selected for:
 To turn any of these ideas into a full graphic novel with
 generated images, use:
 
-> /story-generator {Story Title} --panels {N}
+> book-media-generator (story route): {Story Title} --panels {N}
 
 Provide the subject's name (and optionally `--panels N` to
 override the suggested count) and the skill will handle the

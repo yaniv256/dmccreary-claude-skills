@@ -1,6 +1,6 @@
 # Case Study: Biophilic vs. Brutalist Spaces Poster
 
-This worked example shows how the `verified-infographic-generator` skill
+This worked example shows how the verified-infographic workflow
 would have prevented the 10 fact errors found in a real one-shot-generated
 poster.
 

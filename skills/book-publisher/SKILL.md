@@ -59,7 +59,7 @@ bk-generate-book-metrics 2>/dev/null \
   || python3 "$BK_HOME/src/book-metrics/book-metrics.py" docs
 ```
 
-Then read `docs/learning-graph/book-metrics.json` (the `metrics` object). If the script is unavailable, load the book-installer skill's `references/book-metrics.md` guide (feature #40) for the full setup.
+Then read `docs/learning-graph/book-metrics.json` (the `metrics` object). If the script is unavailable, load `$HOME/.claude/skills/book-installer/references/book-metrics.md` (feature #40) for the full setup.
 
 ## Step 3: Load the Matched Guide
 

@@ -340,4 +340,4 @@ hide:
 
 - `mkdocs-template.md` - Create new MkDocs project structure
 - `learning-graph-viewer.md` - Add interactive learning graph
-- `linkedin-announcement-generator` - Create social media announcements
+- `book-publisher` (linkedin-post route) - Create social media announcements

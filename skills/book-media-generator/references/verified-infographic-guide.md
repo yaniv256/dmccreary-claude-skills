@@ -33,7 +33,7 @@ Do **NOT** use this skill for:
 - Purely decorative images with no factual claims
 - Diagrams where the user supplies pre-verified data and just needs a layout rendered
 - Artistic posters, logos, or illustrations without numeric content
-- Static diagrams of known objects (use `interactive-infographic-overlay` for annotated scientific illustrations)
+- Static diagrams of known objects (use the microsim-generator skill's infographic-overlay route for annotated scientific illustrations)
 
 ## Prerequisites
 

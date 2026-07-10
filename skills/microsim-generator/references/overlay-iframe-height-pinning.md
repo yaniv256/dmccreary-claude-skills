@@ -106,8 +106,8 @@ moves `#controls` *above* `#infobox`, the pinning trick still works
 content leaves whitespace *below* the controls instead of above them,
 which is harder to disguise visually.
 
-The `interactive-infographic-overlay` skill enforces this DOM order in
-`assets/main-template.html` and documents it in `SKILL.md` Step 5.
+The infographic-overlay guide enforces this DOM order in
+`assets/infographic-overlay/main-template.html` and documents it in `SKILL.md` Step 5.
 **Do not reorder these elements when generating new sims.**
 
 ## The Self-Correcting Resize Path
@@ -214,7 +214,7 @@ content edits without requiring the sim author to recompute a magic
 number.
 
 If you do implement the escape hatch, document it in
-`references/data-json-schema.md` alongside the existing top-level
+`references/overlay-data-json-schema.md` alongside the existing top-level
 fields.
 
 ## Quick Reference: The Three Lines That Matter

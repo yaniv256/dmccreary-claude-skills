@@ -562,7 +562,7 @@ See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textb
 - `docs/img/cover.png` — book cover image + social-preview hook (via `cover-image-generator.md` + `social-media-preview.md`)
 - Book metrics report (via `bk-generate-book-metrics` script)
 - Diagram reports (via `bk-diagram-reports` script)
-- `README.md` — GitHub-facing README after metrics, so it can embed content counts (via `readme-generator` skill)
+- `README.md` — GitHub-facing README after metrics, so it can embed content counts (via the `book-publisher` readme route — skill)
 - `docs/index.md` — main landing page last, so it can link to all of the above (via `home-page-template.md`)
 - Updated `mkdocs.yml` nav entries for all generated files
 

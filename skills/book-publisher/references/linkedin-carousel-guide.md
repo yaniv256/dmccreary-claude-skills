@@ -21,7 +21,7 @@ the `linkedin-post-guide.md` route for that (the two are often used together: ca
 attached document, announcement text as the post copy, with the carousel referenced instead
 of a bare link).
 
-Do **not** use `textbook-to-presentation-generator` for this — that skill builds a 25-35 slide
+Do **not** use the book-media-generator pptx-lecture route for this — that route builds a 25-35 slide
 **lecture deck** for live classroom delivery with speaker notes. This skill builds a much
 shorter, image-heavy, no-speaker-notes deck meant to be read silently on a phone in a feed.
 
@@ -212,7 +212,7 @@ same as always.
 ```
 
 Keep this directory outside `docs/` (sibling to it, like `presentation/` in
-`textbook-to-presentation-generator`) so MkDocs never tries to build it into the site.
+the pptx-lecture route) so MkDocs never tries to build it into the site.
 
 ## Quality Checklist
 
@@ -249,7 +249,7 @@ and 6 depend on mascot art existing.
 
 - **linkedin-post-guide.md** (this skill) — writes the post caption text; often paired with this
   skill's carousel as the attached document
-- **textbook-to-presentation-generator** — the long-form lecture-deck sibling; reuse its
+- **book-media-generator → pptx-lecture** — the long-form lecture-deck sibling; reuse its
   pptxgenjs setup patterns but not its 25-35 slide scope or speaker-notes step
 - **microsim-utils** (screen-capture reference) — the `bk-capture-screenshot` tool this skill
   depends on for slides 3 and 7
