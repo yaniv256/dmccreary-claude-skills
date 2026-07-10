@@ -271,6 +271,9 @@ nav:
     - Tips and Tricks: workshops/tips-and-tricks.md
     - Workshop Prework: workshops/workshop-prework.md
   - Consolidation Plan: consolidation-plan/index.md
+  - Appendices:
+    - Overview: appendices/index.md
+    - Skill Refactor with Fable 5: appendices/skill-refactor-fable-5.md
 
   - Glossary: glossary.md
   - FAQ: faq.md
