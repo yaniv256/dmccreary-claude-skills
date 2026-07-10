@@ -1,0 +1,71 @@
+{
+  "title": "Static vs. Interactive vs. Adaptive Textbooks",
+  "image": "test-image.svg",
+  "layout": "grid",
+  "showLabels": false,
+  "palette": ["#1389A6", "#2D8A4E", "#6A3FB5", "#E07B39"],
+  "zones": [
+    {
+      "id": "static",
+      "label": "Static — Level 1",
+      "color": "#1389A6",
+      "x1": 2.0,  "y1": 14.0,
+      "x2": 32.0, "y2": 96.0,
+      "summary": "Fixed PDF or print content — no interactivity",
+      "facts": [
+        "Text and static images only — no dynamic elements",
+        "No learner interaction — same content for every reader",
+        "Typically PDF files, printed books, or basic HTML pages",
+        "Difficulty: cannot adapt to the learner's pace or prior knowledge",
+        "Assessment: external only (paper tests, separate LMS)"
+      ]
+    },
+    {
+      "id": "interactive",
+      "label": "Interactive — Level 2",
+      "color": "#2D8A4E",
+      "x1": 35.0, "y1": 14.0,
+      "x2": 65.0, "y2": 96.0,
+      "summary": "Hyperlinked MkDocs site with embedded MicroSims and inline quizzes",
+      "facts": [
+        "Hyperlinked navigation across chapters and glossary",
+        "Interactive MicroSims using p5.js, Chart.js, vis-network",
+        "Inline multiple-choice and concept-check quizzes",
+        "Built with MkDocs Material theme, deployed to GitHub Pages",
+        "Learning graph drives concept ordering and dependency tracking"
+      ]
+    },
+    {
+      "id": "adaptive",
+      "label": "Adaptive — Level 3+",
+      "color": "#6A3FB5",
+      "x1": 68.0, "y1": 14.0,
+      "x2": 98.0, "y2": 96.0,
+      "summary": "AI-personalized content that adapts to each individual learner",
+      "facts": [
+        "xAPI (Experience API) logs every learner interaction",
+        "AI generates on-demand explanations at the learner's level",
+        "Difficulty and pacing adapt based on quiz performance",
+        "Knowledge graph ensures prerequisites are mastered first",
+        "Learner analytics dashboard for instructors"
+      ]
+    }
+  ],
+  "quiz": [
+    {
+      "question": "Which textbook level uses xAPI to track learner progress and adapts content difficulty based on quiz performance?",
+      "correct_zone": "adaptive",
+      "explanation": "Level 3+ adaptive textbooks log every learner interaction via xAPI and use that data to adjust difficulty, pacing, and even generate personalized explanations on demand."
+    },
+    {
+      "question": "Which textbook level is built with MkDocs Material, embeds p5.js MicroSims, and includes inline quizzes — but does NOT yet personalize content to the individual learner?",
+      "correct_zone": "interactive",
+      "explanation": "Level 2 interactive textbooks are the target of the claude-skills workflow: MkDocs Material + MicroSims + quizzes, deployed to GitHub Pages, with a learning-graph-driven concept order."
+    },
+    {
+      "question": "Which textbook level delivers the same fixed content to every reader and requires external tools (paper tests, an LMS) for assessment?",
+      "correct_zone": "static",
+      "explanation": "Level 1 static textbooks are PDFs or basic HTML with no embedded interactivity. Assessment must happen outside the book (in a separate LMS or on paper) because the content itself cannot respond to the learner."
+    }
+  ]
+}

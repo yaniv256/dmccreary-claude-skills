@@ -1197,6 +1197,10 @@
           
         
       
+        
+          
+        
+      
     
     
     
@@ -1215,6 +1219,55 @@
   
   <span class="md-ellipsis">
     MicroSims
+  </span>
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+          
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+    <a href="../slides/" class="md-nav__link">
+      
+  
+  <span class="md-ellipsis">
+    Slides
   </span>
   
 
@@ -1496,6 +1549,53 @@
   
 
       </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+    <a href="../appendices/" class="md-nav__link">
+      
+  
+  <span class="md-ellipsis">
+    Appendices
+  </span>
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
     </li>
   
 
@@ -2261,15 +2361,14 @@ path where the links are created.</p>
 1. Creating a command definition file in <code>~/.claude/commands/</code> (or <code>.claude/commands/</code> in your project)
 2. Having an executable script in your <code>$PATH</code> that the command calls</p>
 <p>The <code>list-skills.sh</code> script provides this functionality and is automatically installed to <code>~/.local/bin</code> when you run <code>bk-install-scripts</code>.</p>
-<p>To enable the <code>/skills</code> slash command:</p>
+<p>To enable the <code>/skills</code> (and <code>/ibook</code>) slash commands:</p>
 <p><strong>Option 1: Install globally (recommended):</strong>
-</p><div class="highlight"><table class="highlighttable"><tbody><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
-<span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="nb">cd</span><span class="w"> </span><span class="nv">$BK_HOME</span>/scripts
-./install-skills-command.sh
+</p><div class="highlight"><table class="highlighttable"><tbody><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span></pre></div></td><td class="code"><div><pre><span></span><code>bk-install-skills
 </code></pre></div></td></tr></tbody></table></div><p></p>
-<p>This will:
-- Copy <code>list-skills.sh</code> to <code>~/.local/bin/</code> (if not already installed by bk-install-scripts)
-- Copy <code>commands/skills.md</code> to <code>~/.claude/commands/skills.md</code></p>
+<p>In addition to symlinking every skill into <code>~/.claude/skills/</code>, this symlinks
+every command in <code>commands/*.md</code> into <code>~/.claude/commands/</code> — so <code>/skills</code>,
+<code>/ibook</code>, and any future command become available globally. (The <code>list-skills.sh</code>
+helper used by <code>/skills</code> is installed separately by <code>bk-install-scripts</code>.)</p>
 <p><strong>Option 2: Install for a specific project:</strong>
 </p><div class="highlight"><table class="highlighttable"><tbody><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">1</span>
 <span class="normal">2</span></pre></div></td><td class="code"><div><pre><span></span><code>mkdir<span class="w"> </span>-p<span class="w"> </span>.claude/commands
@@ -2407,7 +2506,7 @@ Type <code>/skills</code> in Claude Code and it should list all available skills
 <ol>
 <li>Check that <code>list-skills.sh</code> is in your PATH: <code>which list-skills.sh</code></li>
 <li>Check that the command file exists: <code>ls ~/.claude/commands/skills.md</code></li>
-<li>Re-run: <code>cd $BK_HOME/scripts &amp;&amp; ./install-skills-command.sh</code></li>
+<li>Re-run: <code>bk-install-skills</code></li>
 <li>Restart Claude Code</li>
 </ol>
 <h3 id="permission-denied-when-running-scripts">Permission denied when running scripts</h3>

@@ -539,7 +539,7 @@
       
   
   <span class="md-ellipsis">
-    Book Generation Skills
+    Book Skill Pages (Legacy)
   </span>
   
 
@@ -619,7 +619,7 @@
       
   
   <span class="md-ellipsis">
-    MicroSim Generation Skills
+    MicroSim Skill Pages (Legacy)
   </span>
   
 
@@ -669,7 +669,7 @@
       
   
   <span class="md-ellipsis">
-    Specialized Skills
+    Specialized Skill Pages (Legacy)
   </span>
   
 
@@ -700,6 +700,10 @@
   
     
     
+      
+        
+          
+        
       
         
           
@@ -1123,6 +1127,55 @@
         
       
         
+          
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+    <a href="../slides/" class="md-nav__link">
+      
+  
+  <span class="md-ellipsis">
+    Slides
+  </span>
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
       
         
       
@@ -1386,6 +1439,53 @@
   
   
   
+    
+    
+      
+        
+          
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    <li class="md-nav__item md-nav__item--pruned md-nav__item--nested">
+      
+        
+  
+  
+    <a href="../appendices/" class="md-nav__link">
+      
+  
+  <span class="md-ellipsis">
+    Appendices
+  </span>
+  
+
+      
+        <span class="md-nav__icon md-icon"></span>
+      
+    </a>
+  
+
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
     <li class="md-nav__item">
       <a href="../glossary/" class="md-nav__link">
         
@@ -1507,6 +1607,33 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#meta-skills-routers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Meta-Skills (routers)
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#content-pipeline-skills" class="md-nav__link">
+    <span class="md-ellipsis">
+      Content-Pipeline Skills
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#where-did-skill-x-go" class="md-nav__link">
+    <span class="md-ellipsis">
+      Where Did Skill X Go?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#quality-standards" class="md-nav__link">
     <span class="md-ellipsis">
       Quality Standards
@@ -1548,13 +1675,106 @@
 
 
 <h1 id="skill-descriptions">Skill Descriptions</h1>
-<p>This page provides an overview of all available Claude skills is
-three categories:</p>
+<p>The repository ships <strong>14 loaded skills</strong>: five meta-skills that route to
+on-demand guides, eight content-pipeline skills, and one standalone tool.
+This layout keeps the always-loaded skill descriptions under 1% of a 200K
+context window (~1,000 tokens) and well below Claude Code's 30-skill limit.</p>
+<h2 id="meta-skills-routers">Meta-Skills (routers)</h2>
+<p>Each meta-skill matches your request against a keyword routing table, then
+loads the matching guide from its <code>references/</code> directory.</p>
+<table>
+<thead>
+<tr>
+<th>Meta-Skill</th>
+<th>Routes</th>
+<th>Use for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>book-installer</code></td>
+<td>init-textbook scaffold (feature 0), 40 install features (math, mascot, learning-graph viewer, Google Analytics, 404, kanban…), book-metrics</td>
+<td>Project scaffold, infrastructure, reports</td>
+</tr>
+<tr>
+<td><code>microsim-generator</code></td>
+<td>p5, chartjs, plotly, mermaid, vis-network, timeline, map, venn, bubble, comparison-table, celebration, causal-loop, concept-classifier, infographic-overlay, docker-python-lab</td>
+<td>Every interactive MicroSim type</td>
+</tr>
+<tr>
+<td><code>microsim-utils</code></td>
+<td>standardization, screen-capture, add-icons, index-generator, iframe height/testing tools, layout-reviewer, diagram-reports</td>
+<td>MicroSim QA and maintenance</td>
+</tr>
+<tr>
+<td><code>book-media-generator</code></td>
+<td>marp-deck (web slides), pptx-lecture (PowerPoint), story (graphic novels), verified-infographic (fact-checked posters), chapter-images (Wikimedia sourcing), text-to-speech, pronounce-button</td>
+<td>Slides, illustrations, images, audio</td>
+</tr>
+<tr>
+<td><code>book-publisher</code></td>
+<td>readme, linkedin-post, linkedin-carousel, press-release</td>
+<td>Publishing and promotion — all routes read <code>docs/learning-graph/book-metrics.json</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="content-pipeline-skills">Content-Pipeline Skills</h2>
+<p>These remain standalone because each is a complex multi-step workflow:</p>
 <ol>
-<li>Skills for <a href="book/">generating intelligent textbooks</a> from a course description</li>
-<li>Skills for <a href="microsims/">converting a description of a diagram into MicroSim</a>.</li>
-<li>Skills that are <a href="">specific</a> to one type of textbook such as a circuit diagram generator for a electrical engineering department</li>
+<li><a href="book/course-description-analyzer/">Course Description Analyzer</a> — validate/score the course description</li>
+<li><a href="book/learning-graph-generator/">Learning Graph Generator</a> — 200-concept DAG with taxonomy and quality reports</li>
+<li><a href="book/book-chapter-generator/">Book Chapter Structure Generator</a> — chapter design from the learning graph</li>
+<li><a href="book/chapter-content-generator/">Chapter Content Generator</a> — full chapter text, diagrams, exercises</li>
+<li><a href="book/glossary-generator/">Glossary Generator</a> — ISO 11179-compliant definitions</li>
+<li><a href="book/faq-generator/">FAQ Generator</a> — Bloom's-distributed FAQ with quality reports</li>
+<li><a href="book/quiz-generator/">Quiz Generator</a> — per-chapter multiple-choice quizzes</li>
+<li><a href="book/reference-generator/">Reference Generator</a> — curated per-chapter references</li>
 </ol>
+<p>Plus one standalone tool: <code>docx-to-web-publisher</code> (.docx → Next.js content pages).</p>
+<h2 id="where-did-skill-x-go">Where Did Skill X Go?</h2>
+<p>Eighteen former standalone skills were consolidated into the meta-skills
+above. The verbatim originals live in <code>skills/archived/</code> in the repository,
+whose README holds the full alias map (old name → new route → trigger
+keywords). Highlights:</p>
+<table>
+<thead>
+<tr>
+<th>Former skill</th>
+<th>Now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>init-textbook</td>
+<td><code>book-installer</code> feature 0</td>
+</tr>
+<tr>
+<td>register-book-analytics</td>
+<td><code>book-installer</code> feature 25</td>
+</tr>
+<tr>
+<td>concept-classifier, causal-loop-diagram-generator, interactive-infographic-overlay, docker-python-lab</td>
+<td><code>microsim-generator</code> routes</td>
+</tr>
+<tr>
+<td>diagram-reports-generator</td>
+<td><code>microsim-utils</code> route</td>
+</tr>
+<tr>
+<td>marp-generator, textbook-to-presentation-generator, story-generator, verified-infographic-generator, chapter-image-enhancer, text-to-speech, pronounce-button</td>
+<td><code>book-media-generator</code> routes</td>
+</tr>
+<tr>
+<td>readme-generator, linkedin-announcement-generator, linkedin-carousel-generator, press-release-generator</td>
+<td><code>book-publisher</code> routes</td>
+</tr>
+</tbody>
+</table>
+<p>The per-skill pages under <a href="book/">Book</a>,
+<a href="microsims/">MicroSims</a>, and
+<a href="specialized-skills/">Specialized</a> are kept as <strong>legacy snapshots</strong>
+so existing links keep working — the routing tables above are the current
+source of truth.</p>
 <h2 id="quality-standards">Quality Standards</h2>
 <p>All content generated by these skills follows:</p>
 <ul>
@@ -1570,10 +1790,12 @@ three categories:</p>
 <li><strong>Professional Presentation</strong>: Clean, consistent formatting</li>
 </ul>
 <h2 id="contributing">Contributing</h2>
-<p>Skills are defined in <code>/skills/[skill-name]/SKILL.md</code> with:
-- YAML frontmatter (name, description, license)
-- Workflow steps and instructions
-- Supporting assets (templates, scripts, references)</p>
+<p>Skills are defined in <code>/skills/[skill-name]/SKILL.md</code> with:</p>
+<ul>
+<li>YAML frontmatter (name, description, license)</li>
+<li>Workflow steps and instructions</li>
+<li>Supporting assets (templates, scripts, references)</li>
+</ul>
 <p>See the <a href="https://github.com/dmccreary/claude-skills">Skill Creator Guide</a> for details on creating new skills.</p>
 
 
