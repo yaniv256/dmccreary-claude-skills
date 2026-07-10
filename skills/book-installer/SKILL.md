@@ -113,7 +113,7 @@ Match the user's request to the appropriate installation guide:
 | 1, simple mkdocs, minimal template, starter config | `references/init-textbook.md` | Canonical scaffold (supersedes the old minimal template) |
 | google analytics, GA4, measurement id, tracking id, G-, analytics property, register analytics, 25 | `references/google-analytics.md` | Create the GA4 property, write the G-* Measurement ID into mkdocs.yml extra.analytics, verify the tag, deploy |
 | enrich, add feature, number 2-24, specific feature name | `references/mkdocs-features.md` | Install specific feature |
-| new project, mkdocs, textbook, bootstrap, setup, template, new book | `references/mkdocs-template.md` | Create new MkDocs Material project |
+| new project, mkdocs, textbook, bootstrap, setup, template, new book | `references/init-textbook.md` | Create new MkDocs Material project (feature 0 scaffold) |
 | graph viewer, learning graph, visualization, interactive graph, concept viewer | `references/learning-graph-viewer.md` | Add learning graph viewer to existing project |
 | track skills, skill usage, activity tracking, hooks, usage analytics | `references/skill-tracker.md` | Set up skill tracking with hooks |
 | generate cover image prompt, generate cover image, auto cover image prompt, create cover image promt, run cover prompt script | `references/cover-image-generator.md` | Generate a high-quality cover image prompt from the book's own content; image auto-generation via API/ChatGPT is optional and only runs if explicitly requested |
@@ -151,9 +151,6 @@ Asking for help or what book-installer can do?
 
 Creating a new project/textbook from scratch (empty directory)?
   → YES: init-textbook.md (feature 0 — the canonical scaffold)
-
-Explicitly want the Conda + Cairo social-card full setup instead?
-  → YES: mkdocs-template.md (Option 2)
 
 Registering the book with Google Analytics (GA4 / G-* Measurement ID)?
   → YES: google-analytics.md
@@ -279,31 +276,6 @@ Each guide contains:
 **Prerequisites:**
 - Claude in Chrome extension connected; user logged into Google Analytics
 - site_url set in mkdocs.yml
-
-### mkdocs-template.md
-
-**Purpose:** Bootstrap a complete MkDocs Material intelligent textbook project (legacy full setup — for new projects prefer feature 0 / init-textbook.md)
-
-**Creates:**
-- Conda virtual environment named 'mkdocs'
-- Full MkDocs Material project structure
-- Custom CSS for branding
-- Social media card plugins
-- GitHub Pages deployment configuration
-- URI scheme in `extra` section for global discoverability
-
-**URI Scheme:**
-New projects automatically include the textbook schema in mkdocs.yml:
-```yaml
-extra:
-  schema: https://dmccreary.github.io/intelligent-textbooks/ns/textbook/v1
-```
-See the [URI Scheme documentation](https://dmccreary.github.io/intelligent-textbooks/uri-scheme/) for details.
-
-**Prerequisites:**
-- Conda installed
-- Git installed
-- GitHub repository created
 
 ### learning-graph-viewer.md
 

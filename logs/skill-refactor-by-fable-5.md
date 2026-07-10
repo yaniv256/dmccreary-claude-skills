@@ -300,7 +300,7 @@ A repo-wide path-integrity check tested **191 path references** across all five 
 ## 6. Outstanding Items
 
 1. **Follow-up task chip spawned**: "Fix stale asset paths in round-1 meta-skill guides" — repoint or remove the ~30 pre-existing broken references listed in §4 Phase 8.
-2. **Decision for Dan**: delete `mkdocs-template.md` Option 2 outright? Its Conda/Cairo assets never existed in the repo, and feature 0 is now the canonical scaffold. (Included in the follow-up task's scope.)
+2. ~~**Decision for Dan**: delete `mkdocs-template.md` Option 2 outright?~~ **Resolved same session**: Dan approved; `references/mkdocs-template.md` was deleted entirely (Option 1 was already superseded by feature 0, and Option 2's Conda/Cairo assets never existed in the repo). The routing row, decision-tree entry, and guide-catalog entry now point at `init-textbook.md`, and the six guides that said "run mkdocs-template.md first" now say feature 0.
 3. **anthropic-skills plugin duplicates**: the plugin independently ships `register-book-analytics` and `microsim-p5`, which load regardless of this repo — separate cleanup, user-level plugin configuration.
 4. **Trigger smoke tests in real usage**: the keyword audit passed statically; the true test is natural requests in a real textbook project ("add a quiz to chapter 3", "make slides for chapter 2", "add pronunciation for Neuron", "create a causal loop diagram", "add a Python lab"). Budget headroom exists to re-lengthen any description that under-triggers.
 5. **Downstream textbook repos** may reference old skill names in their own CLAUDE.md files — the alias map in `skills/archived/README.md` is the lookup table when they do.
