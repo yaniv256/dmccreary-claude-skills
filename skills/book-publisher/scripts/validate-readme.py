@@ -85,6 +85,52 @@ def extract_badges(content: str) -> List[str]:
         badges.append(match[1])  # badge URL
     return badges
 
+
+def count_unlabeled_fenced_code_blocks(content: str) -> int:
+    """Count opening Markdown fences whose info string is empty.
+
+    Fence meaning is stateful: a bare fence closes an existing block, but opens
+    an unlabeled block when no block is active. Treating each fence as an
+    independent regex match therefore misclassifies every valid closing fence.
+    """
+    fence_pattern = re.compile(r"^[ \t]{0,3}(`{3,}|~{3,})([^\r\n]*)$")
+    open_fence_character = None
+    open_fence_length = 0
+    unlabeled_openings = 0
+
+    for line in content.splitlines():
+        match = fence_pattern.match(line)
+        if not match:
+            continue
+
+        marker, info_string = match.groups()
+        marker_character = marker[0]
+
+        if open_fence_character is not None:
+            is_closing_fence = (
+                marker_character == open_fence_character
+                and len(marker) >= open_fence_length
+                and not info_string.strip()
+            )
+            if is_closing_fence:
+                open_fence_character = None
+                open_fence_length = 0
+            continue
+
+        # Backticks in a backtick fence's info string make it invalid Markdown,
+        # so do not let that line alter parser state.
+        if marker_character == "`" and "`" in info_string:
+            continue
+
+        if not info_string.strip():
+            unlabeled_openings += 1
+
+        open_fence_character = marker_character
+        open_fence_length = len(marker)
+
+    return unlabeled_openings
+
+
 def check_markdown_formatting(content: str) -> List[str]:
     """Check for common markdown formatting issues."""
     issues = []
@@ -100,8 +146,7 @@ def check_markdown_formatting(content: str) -> List[str]:
                     issues.append(f"Line {i+1}: List item should have blank line before it")
 
     # Check for code blocks without language specification
-    code_blocks = re.findall(r'```(\w*)\n', content)
-    unnamed_blocks = sum(1 for lang in code_blocks if not lang)
+    unnamed_blocks = count_unlabeled_fenced_code_blocks(content)
     if unnamed_blocks > 0:
         issues.append(f"Found {unnamed_blocks} code block(s) without language specification")
 
