@@ -56,4 +56,11 @@ should discover the dependency and command shape.
 
 ## Resolution evidence
 
-Pending pull request and merge verification.
+- Fix PR: [#14](https://github.com/yaniv256/dmccreary-claude-skills/pull/14)
+- Focused iframe-tester CLI regressions: 3/3 passed.
+- Combined MicroSim utility tests: 8/8 passed.
+- Repository Python tests: 31/31 passed.
+- Durable learning:
+  [Parse Help Before Loading Optional Dependencies](../solutions/logic-errors/parse-help-before-loading-optional-dependencies.md)
+
+Merge commit and independent default-branch verification remain pending.
