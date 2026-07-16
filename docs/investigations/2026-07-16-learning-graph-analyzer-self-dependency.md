@@ -1,7 +1,7 @@
 ---
 title: Learning Graph Analyzer Crashes on Self-Dependencies
 date: 2026-07-16
-status: current
+status: resolved
 severity: high
 component: skills/learning-graph-generator/analyze-graph.py
 trello: https://trello.com/c/0HQv29lF/202-investigation-learning-graph-analyzer-crashes-on-self-dependency
@@ -78,3 +78,19 @@ string. No code actually collected or reported self-edges.
 - A valid DAG retains its prior longest-path behavior.
 - Focused and repository validation pass.
 - The remediation is merged and the durable solution record is linked here.
+
+## Resolution evidence
+
+- Fix PR: [#7](https://github.com/yaniv256/dmccreary-claude-skills/pull/7)
+- Merge commit: `e543355423c68b4f171465b92045734a527ba1ea`
+- Merged at: 2026-07-16T04:29:07Z
+- Focused analyzer tests: 3/3 passed.
+- Existing sample graph: valid DAG, no self-dependencies, longest path 5.
+- Repository Python tests: 22/22 passed across book installer, README
+  validation, glossary scoring, learning-graph analysis, and book metrics.
+- Durable learning:
+  [Validate Graph Preconditions Before Path Analysis](../solutions/logic-errors/validate-graph-preconditions-before-path-analysis.md)
+
+All closure criteria are satisfied. Self-edges and larger cycles now produce a
+complete diagnostic report without running longest-path analysis; valid DAGs
+retain their prior path behavior.
