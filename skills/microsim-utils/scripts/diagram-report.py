@@ -32,6 +32,8 @@ Usage:
 import re
 import csv
 import html as html_lib
+import os
+import unicodedata
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple
@@ -77,10 +79,8 @@ class VisualElement:
 class DiagramAnalyzer:
     """Analyzes markdown files to extract diagram and MicroSim information"""
 
-    # Patterns to match - made more flexible
-    # Match #### Diagram: Title followed by <details> block (with optional content in between)
-    HEADER_PATTERN = re.compile(r'^####\s+Diagram:\s*[^\n]+', re.MULTILINE)
-    HEADER_DETAILS_PATTERN = re.compile(r'####\s+Diagram:\s*([^\n]+)\n(.*?)<details[^>]*>(.*?)</details>', re.DOTALL)
+    # A specification belongs only to the Diagram heading immediately before it.
+    HEADER_PATTERN = re.compile(r'^####\s+Diagram:\s*([^\n]+)', re.MULTILINE)
     DETAILS_PATTERN = re.compile(r'<details[^>]*>(.*?)</details>', re.DOTALL)
     SUMMARY_PATTERN = re.compile(r'<summary>(.*?)</summary>', re.DOTALL)
     TYPE_PATTERN = re.compile(r'\*\*Type:\*\*\s*(.*?)(?:\n|\r|\*\*)', re.IGNORECASE)
@@ -110,9 +110,24 @@ class DiagramAnalyzer:
 
     def discover_chapter_files(self) -> List[Path]:
         """Find numbered chapters in either flat or nested textbook layouts."""
-        flat = self.chapters_dir.glob('[0-9][0-9]-*.md')
-        nested = self.chapters_dir.glob('[0-9][0-9]-*/index.md')
-        return sorted((*flat, *nested), key=lambda path: path.relative_to(self.chapters_dir).as_posix())
+        candidates = sorted(
+            (*self.chapters_dir.glob('[0-9][0-9]-*.md'),
+             *self.chapters_dir.glob('[0-9][0-9]-*/index.md')),
+            key=lambda path: path.relative_to(self.chapters_dir).as_posix(),
+        )
+        chapter_numbers = {}
+        for path in candidates:
+            chapter_slug = path.parent.name if path.name == 'index.md' else path.stem
+            chapter_number = chapter_slug[:2]
+            if chapter_number in chapter_numbers:
+                first = chapter_numbers[chapter_number].relative_to(self.chapters_dir)
+                second = path.relative_to(self.chapters_dir)
+                self.errors.append(
+                    f"ambiguous chapter {chapter_number}: both {first} and {second} exist"
+                )
+            else:
+                chapter_numbers[chapter_number] = path
+        return candidates
 
     def analyze_all_chapters(self):
         """Analyze all chapter directories"""
@@ -142,29 +157,25 @@ class DiagramAnalyzer:
                 chapter_num = "??"
                 chapter_name = chapter_slug
 
-            # Find all header + <details> blocks first (preferred method)
-            header_count = len(self.HEADER_PATTERN.findall(content))
-            header_details_blocks = list(self.HEADER_DETAILS_PATTERN.finditer(content))
+            headers = list(self.HEADER_PATTERN.finditer(content))
 
             if self.verbose:
                 print(f"\n  Analyzing {relative_source}:")
-                print(
-                    f"    Found {header_count} Diagram headers and "
-                    f"{len(header_details_blocks)} complete header+details blocks"
-                )
-
-            if len(header_details_blocks) != header_count:
-                self.errors.append(
-                    f"{relative_source}: found {header_count} Diagram headers but "
-                    f"only {len(header_details_blocks)} complete <details> specifications"
-                )
-                return
+                print(f"    Found {len(headers)} Diagram headers")
 
             elements_found = 0
-            for match in header_details_blocks:
-                header_title = match.group(1).strip()
-                # group(2) is now the content between header and details (iframe, etc.)
-                details_content = match.group(3)  # The actual details content
+            for index, header in enumerate(headers):
+                segment_end = headers[index + 1].start() if index + 1 < len(headers) else len(content)
+                segment = content[header.end():segment_end]
+                details_blocks = list(self.DETAILS_PATTERN.finditer(segment))
+                header_title = header.group(1).strip()
+                if len(details_blocks) != 1:
+                    self.errors.append(
+                        f"{relative_source}: Diagram '{header_title}' has "
+                        f"{len(details_blocks)} complete <details> specifications; expected exactly 1"
+                    )
+                    return
+                details_content = details_blocks[0].group(1)
                 element = self.parse_details_block(
                     details_content,
                     chapter_num,
@@ -377,16 +388,46 @@ class DiagramAnalyzer:
 class ReportGenerator:
     """Generates reports in various formats"""
 
-    def __init__(self, elements: List[VisualElement]):
+    def __init__(
+        self,
+        elements: List[VisualElement],
+        chapters_dir: Path = None,
+        output_dir: Path = None,
+    ):
         self.elements = elements
+        self.chapters_dir = Path(chapters_dir).resolve() if chapters_dir else None
+        self.output_dir = Path(output_dir).resolve() if output_dir else None
 
     @staticmethod
-    def chapter_link(element: VisualElement) -> str:
+    def markdown_text(value: str) -> str:
+        """Escape source text used in generated Markdown tables and links."""
+        return (
+            value.replace('\\', '\\\\')
+            .replace('|', '\\|')
+            .replace('[', '\\[')
+            .replace(']', '\\]')
+            .replace('<', '&lt;')
+            .replace('>', '&gt;')
+            .replace('\r\n', '<br>')
+            .replace('\n', '<br>')
+        )
+
+    @staticmethod
+    def markdown_anchor(value: str) -> str:
+        """Match Python-Markdown's default heading slug behavior."""
+        normalized = unicodedata.normalize('NFKD', value).encode('ascii', 'ignore').decode('ascii')
+        normalized = re.sub(r'[^\w\s-]', '', normalized.lower())
+        return re.sub(r'[-\s]+', '-', normalized).strip('-')
+
+    def chapter_link(self, element: VisualElement) -> str:
         """Build a link for either a flat chapter file or nested index file."""
-        anchor = re.sub(
-            r"[^a-z0-9]+", "-", f"diagram-{element.element_title}".lower()
-        ).strip("-")
-        return f"../chapters/{element.source_file}#{anchor}"
+        anchor = self.markdown_anchor(f"diagram-{element.element_title}")
+        if self.chapters_dir and self.output_dir:
+            source = self.chapters_dir / element.source_file
+            relative_source = Path(os.path.relpath(source, start=self.output_dir)).as_posix()
+        else:
+            relative_source = f"../chapters/{element.source_file}"
+        return f"{relative_source}#{anchor}"
 
     def generate_markdown_table(self) -> str:
         """Generate Markdown table report"""
@@ -424,11 +465,13 @@ class ReportGenerator:
         ])
 
         for element in sorted(self.elements, key=lambda e: (e.chapter_num, e.element_title)):
-            bloom_str = ', '.join(element.bloom_levels)
-            element_link = f"[{element.element_title}]({self.chapter_link(element)})"
-            status_display = element.status if element.status else ""
+            bloom_str = self.markdown_text(', '.join(element.bloom_levels))
+            title = self.markdown_text(element.element_title)
+            element_link = f"[{title}]({self.chapter_link(element)})"
+            status_display = self.markdown_text(element.status) if element.status else ""
             microsim_str = '<br>'.join(
-                f"{name} ({score})" for name, score in element.microsim_recommendations
+                f"{self.markdown_text(name)} ({score})"
+                for name, score in element.microsim_recommendations
             )
             lines.append(
                 f"| {int(element.chapter_num)} | {element_link} | "
@@ -470,9 +513,10 @@ class ReportGenerator:
             ])
 
             for element in sorted(elements, key=lambda e: e.element_title):
-                lines.append(f"### [{element.element_title}]({self.chapter_link(element)})")
+                title = self.markdown_text(element.element_title)
+                lines.append(f"### [{title}]({self.chapter_link(element)})")
                 if element.status:
-                    lines.append(f"- **Status:** {element.status}")
+                    lines.append(f"- **Status:** {self.markdown_text(element.status)}")
                 lines.append(f"- **Type:** {element.element_type.title()}")
                 lines.append(f"- **Bloom's Taxonomy:** {', '.join(element.bloom_levels)}")
                 lines.append(f"- **UI keyword mentions:** {element.ui_elements_count}")
@@ -604,11 +648,11 @@ class ReportGenerator:
                 <div class="number">{total}</div>
             </div>
             <div class="stat-card">
-                <h3>Diagrams</h3>
+                <h3>Diagram Specifications</h3>
                 <div class="number">{diagrams}</div>
             </div>
             <div class="stat-card">
-                <h3>MicroSims</h3>
+                <h3>MicroSim Specifications</h3>
                 <div class="number">{microsims}</div>
             </div>
             <div class="stat-card">
@@ -636,6 +680,7 @@ class ReportGenerator:
             <tr>
                 <th>Chapter</th>
                 <th>Element Title</th>
+                <th>Status</th>
                 <th>Type</th>
                 <th>Bloom Levels</th>
                 <th>UI Mentions</th>
@@ -659,6 +704,7 @@ class ReportGenerator:
             <tr class="{type_class}">
                 <td><strong>{int(element.chapter_num)}</strong></td>
                 <td>{html_lib.escape(element.element_title)}</td>
+                <td>{html_lib.escape(element.status)}</td>
                 <td><em>{html_lib.escape(element.element_type.title())}</em></td>
                 <td><small>{bloom_str}</small></td>
                 <td style="text-align: center;">{element.ui_elements_count}</td>
@@ -783,7 +829,7 @@ def main():
         return 2
 
     # Generate report
-    generator = ReportGenerator(analyzer.elements)
+    generator = ReportGenerator(analyzer.elements, chapters_dir, output_dir)
 
     if args.format == 'markdown':
         # Generate table report

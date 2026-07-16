@@ -58,6 +58,19 @@ class DiagramReportTests(unittest.TestCase):
                 ["01-flat.md", "02-nested/index.md"],
             )
 
+    def test_rejects_duplicate_flat_and_nested_chapter_numbers(self):
+        with tempfile.TemporaryDirectory() as directory:
+            chapters = Path(directory)
+            (chapters / "01-flat.md").write_text(SPEC, encoding="utf-8")
+            nested = chapters / "01-nested"
+            nested.mkdir()
+            (nested / "index.md").write_text(SPEC, encoding="utf-8")
+
+            analyzer = diagram_report.DiagramAnalyzer(str(chapters))
+            analyzer.analyze_all_chapters()
+
+            self.assertIn("ambiguous chapter 01", analyzer.errors[0])
+
     def test_reports_link_to_the_real_source_layout_and_label_heuristics(self):
         with tempfile.TemporaryDirectory() as directory:
             chapters = Path(directory)
@@ -76,6 +89,31 @@ class DiagramReportTests(unittest.TestCase):
             self.assertIn("Planning Heuristic", table)
             self.assertIn("forms-generator (88)", table)
             self.assertIn("**UI keyword mentions:** 4", details)
+
+    def test_custom_output_links_and_markdown_escaping_are_valid(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            chapters = root / "book/docs/chapters"
+            chapters.mkdir(parents=True)
+            source = SPEC.replace(
+                "Decision <Boundary>", "Bloom's | [Boundary] <Review>"
+            ).replace("**Status:** Planned", "**Status:** Planned | blocked")
+            (chapters / "01-flat.md").write_text(source, encoding="utf-8")
+            output = root / "reports"
+            output.mkdir()
+            analyzer = diagram_report.DiagramAnalyzer(str(chapters))
+            analyzer.analyze_all_chapters()
+
+            table = diagram_report.ReportGenerator(
+                analyzer.elements, chapters, output
+            ).generate_markdown_table()
+
+            self.assertIn(
+                "../book/docs/chapters/01-flat.md#diagram-blooms-boundary-review",
+                table,
+            )
+            self.assertIn("Bloom's \\| \\[Boundary\\] &lt;Review&gt;", table)
+            self.assertIn("Planned \\| blocked", table)
 
     def test_csv_includes_status_and_recommendations(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -124,6 +162,46 @@ class DiagramReportTests(unittest.TestCase):
             self.assertIn("chapter file(s) could not be analyzed", result.stdout)
             self.assertFalse((output / "diagram-table.md").exists())
 
+    def test_heading_cannot_borrow_the_next_heading_specification(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            chapters = root / "chapters"
+            chapters.mkdir()
+            (chapters / "01-crossed.md").write_text(
+                """# Chapter
+
+#### Diagram: Missing specification
+
+No details here.
+
+#### Diagram: Actual specification
+
+<details>
+<summary>Specification</summary>
+**Type:** Diagram
+**Status:** Planned
+</details>
+""",
+                encoding="utf-8",
+            )
+            output = root / "out"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--chapters-dir",
+                    str(chapters),
+                    "--output-dir",
+                    str(output),
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertFalse((output / "diagram-table.md").exists())
+
     def test_empty_schema_fails_closed_unless_explicitly_allowed(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -163,6 +241,8 @@ class DiagramReportTests(unittest.TestCase):
             self.assertNotIn("<td>Decision <Boundary></td>", rendered)
             self.assertIn("All Specification Blocks", rendered)
             self.assertNotIn("All Visual Elements", rendered)
+            self.assertIn("<th>Status</th>", rendered)
+            self.assertIn("<td>Planned</td>", rendered)
 
     def test_legacy_command_delegates_to_the_canonical_script(self):
         result = subprocess.run(
