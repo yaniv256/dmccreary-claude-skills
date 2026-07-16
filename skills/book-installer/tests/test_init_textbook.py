@@ -109,7 +109,7 @@ class InitTextbookTests(unittest.TestCase):
             self.assertGreater(len(paths), 10)
             self.assertEqual(list(project.iterdir()), [])
 
-    def test_write_stages_on_project_filesystem_but_preview_does_not(self):
+    def test_preview_uses_system_temp_and_write_cleans_descriptor_stage(self):
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
             config = init_textbook.build_config(arguments(project))
@@ -128,7 +128,10 @@ class InitTextbookTests(unittest.TestCase):
                 init_textbook.scaffold(config, dry_run=True)
                 init_textbook.scaffold(config)
 
-            self.assertEqual(stage_parents, [None, project])
+            self.assertEqual(stage_parents, [None])
+            self.assertFalse(
+                any(path.name.startswith(".init-textbook-") for path in project.iterdir())
+            )
 
     def test_write_failure_rolls_back_files_and_created_directories(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -166,9 +169,30 @@ class InitTextbookTests(unittest.TestCase):
                 relative_paths = init_textbook.render_stage(config, stage)
                 raced_destination = project / ".gitignore"
                 raced_destination.write_text("created concurrently\n", encoding="utf-8")
+                root_fd = init_textbook.open_project_directory(config)
+                directory_fds, directory_identities = (
+                    init_textbook.pin_output_directories(
+                        config,
+                        root_fd,
+                        init_textbook.planned_destinations(config),
+                    )
+                )
 
-                with self.assertRaises(init_textbook.ScaffoldError):
-                    init_textbook.commit_stage(config, stage, relative_paths)
+                try:
+                    with self.assertRaises(init_textbook.ScaffoldError):
+                        init_textbook.commit_stage(
+                            config,
+                            stage,
+                            relative_paths,
+                            root_fd,
+                            directory_fds,
+                            directory_identities,
+                        )
+                finally:
+                    for relative, fd in reversed(list(directory_fds.items())):
+                        if relative != Path("."):
+                            init_textbook.os.close(fd)
+                    init_textbook.os.close(root_fd)
 
             self.assertEqual(
                 raced_destination.read_text(encoding="utf-8"),
@@ -202,6 +226,63 @@ class InitTextbookTests(unittest.TestCase):
 
             self.assertEqual(list(outside.iterdir()), [])
             self.assertFalse(any((project / "docs-original").rglob("*")))
+
+    def test_project_ancestor_swap_is_rejected_before_staging(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            parent = root / "parent"
+            project = parent / "project"
+            replacement = root / "replacement"
+            project.mkdir(parents=True)
+            (replacement / "project").mkdir(parents=True)
+            config = init_textbook.build_config(arguments(project))
+
+            parent.rename(root / "original-parent")
+            parent.symlink_to(replacement, target_is_directory=True)
+
+            with self.assertRaisesRegex(
+                init_textbook.ScaffoldError, "(?:changed|unsafe) before publication"
+            ):
+                init_textbook.scaffold(config)
+
+            self.assertEqual(list((replacement / "project").iterdir()), [])
+            self.assertEqual(list((root / "original-parent" / "project").iterdir()), [])
+
+    def test_rollback_reports_cleanup_failures_and_preserves_primary_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            config = init_textbook.build_config(arguments(project))
+            real_copy = init_textbook.shutil.copyfileobj
+            real_unlink = init_textbook.os.unlink
+            copies = 0
+            unlinks = 0
+
+            def fail_second_copy(source, destination):
+                nonlocal copies
+                copies += 1
+                if copies == 2:
+                    raise OSError("primary copy failure")
+                return real_copy(source, destination)
+
+            def fail_first_unlink(path, *, dir_fd=None):
+                nonlocal unlinks
+                unlinks += 1
+                if unlinks == 1:
+                    raise OSError("rollback unlink failure")
+                return real_unlink(path, dir_fd=dir_fd)
+
+            with mock.patch.object(
+                init_textbook.shutil, "copyfileobj", side_effect=fail_second_copy
+            ), mock.patch.object(
+                init_textbook.os, "unlink", side_effect=fail_first_unlink
+            ):
+                with self.assertRaisesRegex(
+                    init_textbook.ScaffoldError,
+                    "primary copy failure.*rollback failures.*rollback unlink failure",
+                ):
+                    init_textbook.scaffold(config)
+
+            self.assertTrue((project / "docs" / "about.md").exists())
 
     def test_rejects_github_username_with_consecutive_hyphens(self):
         with tempfile.TemporaryDirectory() as directory:

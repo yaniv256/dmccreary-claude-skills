@@ -7,6 +7,7 @@ import argparse
 import datetime as dt
 import os
 import re
+import secrets
 import shutil
 import sys
 import tempfile
@@ -60,6 +61,7 @@ class ScaffoldError(ValueError):
 @dataclass(frozen=True)
 class ScaffoldConfig:
     project_dir: Path
+    project_identity: tuple[int, int]
     site_name: str
     site_description: str
     site_author: str
@@ -125,8 +127,10 @@ def build_config(args: argparse.Namespace) -> ScaffoldConfig:
     if not re.fullmatch(r"\d{4}", year):
         raise ScaffoldError("year must contain exactly four digits")
 
+    project_stat = project_dir.lstat()
     return ScaffoldConfig(
         project_dir=project_dir,
+        project_identity=(project_stat.st_dev, project_stat.st_ino),
         site_name=one_line("site-name", args.site_name),
         site_description=one_line("site-description", args.site_description),
         site_author=one_line("site-author", args.site_author),
@@ -261,26 +265,119 @@ def render_stage(config: ScaffoldConfig, stage: Path) -> list[Path]:
     return rendered_paths
 
 
-def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]) -> None:
+def open_project_directory(config: ScaffoldConfig) -> int:
     if not SAFE_DIR_FD_SUPPORTED:
         raise ScaffoldError(
             "safe publication requires directory-relative, no-follow filesystem support"
         )
 
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    current_fd = os.open(Path(config.project_dir.anchor), directory_flags)
+    try:
+        for part in config.project_dir.parts[1:]:
+            try:
+                next_fd = os.open(part, directory_flags, dir_fd=current_fd)
+            except OSError as error:
+                raise ScaffoldError(
+                    "project path became unsafe before publication"
+                ) from error
+            os.close(current_fd)
+            current_fd = next_fd
+        current = os.fstat(current_fd)
+        if (current.st_dev, current.st_ino) != config.project_identity:
+            raise ScaffoldError("project directory changed before publication")
+        return current_fd
+    except Exception:
+        os.close(current_fd)
+        raise
+
+
+def pin_output_directories(
+    config: ScaffoldConfig,
+    root_fd: int,
+    destinations: list[Path],
+) -> tuple[dict[Path, int], dict[Path, tuple[int, int]]]:
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    root_stat = os.fstat(root_fd)
+    directory_fds: dict[Path, int] = {Path("."): root_fd}
+    directory_identities: dict[Path, tuple[int, int]] = {
+        Path("."): (root_stat.st_dev, root_stat.st_ino)
+    }
+    parents = sorted(
+        {
+            destination.relative_to(config.project_dir).parent
+            for destination in destinations
+        },
+        key=lambda path: (len(path.parts), path.parts),
+    )
+    try:
+        for relative in parents:
+            current_relative = Path(".")
+            current_fd = root_fd
+            for part in relative.parts:
+                next_relative = (
+                    Path(part)
+                    if current_relative == Path(".")
+                    else current_relative / part
+                )
+                if next_relative in directory_fds:
+                    current_relative = next_relative
+                    current_fd = directory_fds[next_relative]
+                    continue
+                try:
+                    next_fd = os.open(part, directory_flags, dir_fd=current_fd)
+                except FileNotFoundError:
+                    break
+                except OSError as error:
+                    raise ScaffoldError(
+                        f"unsafe existing output directory: {next_relative}"
+                    ) from error
+                current = os.fstat(next_fd)
+                directory_fds[next_relative] = next_fd
+                directory_identities[next_relative] = (
+                    current.st_dev,
+                    current.st_ino,
+                )
+                current_relative = next_relative
+                current_fd = next_fd
+        return directory_fds, directory_identities
+    except Exception:
+        for relative, fd in reversed(list(directory_fds.items())):
+            if relative != Path("."):
+                os.close(fd)
+        raise
+
+
+def create_stage_directory(root_fd: int) -> tuple[str, Path]:
+    root_path = Path(f"/proc/self/fd/{root_fd}")
+    if not root_path.is_dir():
+        raise ScaffoldError(
+            "safe publication requires a descriptor-backed project path"
+        )
+    for _ in range(32):
+        name = f".init-textbook-{secrets.token_hex(8)}"
+        try:
+            os.mkdir(name, mode=0o700, dir_fd=root_fd)
+        except FileExistsError:
+            continue
+        return name, root_path / name
+    raise ScaffoldError("could not allocate a unique staging directory")
+
+
+def commit_stage(
+    config: ScaffoldConfig,
+    stage: Path,
+    relative_paths: list[Path],
+    root_fd: int,
+    directory_fds: dict[Path, int],
+    directory_identities: dict[Path, tuple[int, int]],
+) -> None:
+
     def identity(stat_result: os.stat_result) -> tuple[int, int]:
         return (stat_result.st_dev, stat_result.st_ino)
 
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    try:
-        root_fd = os.open(config.project_dir, directory_flags)
-    except OSError as error:
-        raise ScaffoldError(f"could not open project directory safely: {error}") from error
-
     root_identity = identity(os.fstat(root_fd))
-    directory_fds: dict[Path, int] = {Path("."): root_fd}
-    directory_identities: dict[Path, tuple[int, int]] = {
-        Path("."): root_identity
-    }
     written: list[tuple[int, str, tuple[int, int]]] = []
     created_directories: list[tuple[int, str, tuple[int, int]]] = []
 
@@ -374,6 +471,7 @@ def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]
                 raise ScaffoldError(f"output file changed during write: {name}")
 
     failure: Exception | None = None
+    rollback_errors: list[str] = []
     try:
         for relative in relative_paths:
             source = stage / relative
@@ -405,8 +503,14 @@ def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]
                 )
             except FileNotFoundError:
                 continue
+            except OSError as cleanup_error:
+                rollback_errors.append(f"stat {name}: {cleanup_error}")
+                continue
             if identity(current) == expected:
-                os.unlink(name, dir_fd=parent_fd)
+                try:
+                    os.unlink(name, dir_fd=parent_fd)
+                except OSError as cleanup_error:
+                    rollback_errors.append(f"unlink {name}: {cleanup_error}")
         for parent_fd, name, expected in reversed(created_directories):
             try:
                 current = os.stat(
@@ -414,14 +518,67 @@ def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]
                 )
             except FileNotFoundError:
                 continue
+            except OSError as cleanup_error:
+                rollback_errors.append(f"stat directory {name}: {cleanup_error}")
+                continue
             if identity(current) != expected:
                 continue
             try:
                 os.rmdir(name, dir_fd=parent_fd)
-            except OSError:
-                # Preserve a directory populated concurrently by another actor.
-                continue
+            except OSError as cleanup_error:
+                rollback_errors.append(f"rmdir {name}: {cleanup_error}")
+    if failure is not None:
+        if isinstance(failure, ScaffoldError) and not rollback_errors:
+            raise failure
+        detail = f"could not publish scaffold safely: {failure}"
+        if rollback_errors:
+            detail += "; rollback failures: " + " | ".join(rollback_errors)
+        raise ScaffoldError(detail) from failure
+
+
+def scaffold(config: ScaffoldConfig, dry_run: bool = False) -> list[Path]:
+    destinations = preflight(config)
+    if dry_run:
+        with tempfile.TemporaryDirectory(prefix=".init-textbook-") as directory:
+            render_stage(config, Path(directory))
+            return destinations
+
+    root_fd = open_project_directory(config)
+    directory_fds: dict[Path, int] = {Path("."): root_fd}
+    directory_identities: dict[Path, tuple[int, int]] = {
+        Path("."): config.project_identity
+    }
+    stage_name: str | None = None
+    failure: Exception | None = None
+    try:
+        directory_fds, directory_identities = pin_output_directories(
+            config, root_fd, destinations
+        )
+        stage_name, stage = create_stage_directory(root_fd)
+        relative_paths = render_stage(config, stage)
+        commit_stage(
+            config,
+            stage,
+            relative_paths,
+            root_fd,
+            directory_fds,
+            directory_identities,
+        )
+    except Exception as error:
+        failure = error
     finally:
+        if stage_name is not None:
+            try:
+                shutil.rmtree(Path(f"/proc/self/fd/{root_fd}") / stage_name)
+            except OSError as cleanup_error:
+                if failure is None:
+                    failure = ScaffoldError(
+                        f"could not remove staging directory: {cleanup_error}"
+                    )
+                else:
+                    failure = ScaffoldError(
+                        f"{failure}; staging cleanup failure: {cleanup_error}"
+                    )
         for relative, fd in reversed(list(directory_fds.items())):
             if relative != Path("."):
                 os.close(fd)
@@ -430,26 +587,7 @@ def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]
     if failure is not None:
         if isinstance(failure, ScaffoldError):
             raise failure
-        raise ScaffoldError(f"could not publish scaffold safely: {failure}") from failure
-
-
-def scaffold(config: ScaffoldConfig, dry_run: bool = False) -> list[Path]:
-    destinations = preflight(config)
-    # A project can be a writable mount inside a read-only parent. For a real
-    # write, stage on the project's own filesystem; previews use system temp
-    # so the documented non-mutation contract includes the project directory.
-    stage_parent = config.project_dir if not dry_run else None
-    with tempfile.TemporaryDirectory(
-        prefix=".init-textbook-", dir=stage_parent
-    ) as directory:
-        stage = Path(directory)
-        relative_paths = render_stage(config, stage)
-        if dry_run:
-            return destinations
-        # Repeat immediately before the write boundary to catch a race with a
-        # cooperating process that created a destination after initial preflight.
-        preflight(config)
-        commit_stage(config, stage, relative_paths)
+        raise ScaffoldError(f"could not create scaffold safely: {failure}") from failure
     return destinations
 
 
