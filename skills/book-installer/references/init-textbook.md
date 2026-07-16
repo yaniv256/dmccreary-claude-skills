@@ -403,10 +403,9 @@ files in sync — adding only one half is the failure mode.
 
 ## Footgun Avoidance
 
-- **Never overwrite an existing `mkdocs.yml`.** The Step 1 check is
-  load-bearing: the silent-overwrite footgun (delete user's careful nav
-  list, replace with template) is exactly the kind of damage that's hard to
-  undo if it makes it into a commit.
+- **Never overwrite any generated destination.** The initializer's complete
+  preflight is load-bearing: replacing even one existing config, page, hook,
+  image, hidden file, or workspace can destroy user work that is hard to undo.
 - **Confirm substitutions in one block before writing.** A typo in
   `REPO_NAME` ripples into the site URL, edit URI, and copyright link.
   Showing the resolved table and waiting for "yes" makes the error visible
@@ -454,15 +453,15 @@ book-installer/
 2. Read `git config user.name`, `git remote get-url origin`, `basename "$(pwd)"`.
 3. Ask the user for `SITE_NAME` and `SITE_DESCRIPTION`; offer to default the rest.
 4. Echo the resolved table; wait for confirmation.
-5. Create directories, copy + substitute templates, copy `license.png`.
-6. Suggest `mkdocs build --strict`.
+5. Run `scripts/init_textbook.py --dry-run`, then rerun without `--dry-run`.
+6. Run `mkdocs build --strict` (or the documented isolated `uvx` fallback).
 7. Print the next-steps menu pointing at `book-installer`.
 
 ### Example 2: Directory already has content
 
 **User:** "scaffold a new textbook"
 
-**Skill response:** notices `mkdocs.yml` is present, refuses to overwrite,
+**Skill response:** notices a generated destination is present, refuses to overwrite,
 suggests the user either use other book-installer features to enrich the
 existing project, or run feature #0 from a fresh directory.
 

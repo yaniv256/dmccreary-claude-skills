@@ -78,9 +78,9 @@ that weak boundary and then accumulated config-comment and GitHub-link drift.
 4. Copy hidden and binary assets, rename the workspace deterministically, and
    fail if any placeholder remains.
 5. Correct the GitHub edit URI and the social-hook comment.
-6. Route feature 0 through the initializer and make strict build plus social
-   metadata checks agent-owned verification, not merely commands suggested to
-   the user.
+6. Route every feature-0 entry point and example through the initializer and
+   make strict build plus social metadata checks agent-owned verification, not
+   merely commands suggested to the user.
 7. Add focused tests for happy-path output, punctuation-safe metadata,
    collision atomicity, preview non-mutation, hidden/binary assets, unresolved
    placeholders, and generated configuration semantics.

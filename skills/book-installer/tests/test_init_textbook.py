@@ -1,9 +1,10 @@
 import hashlib
 import importlib.util
-import os
+import runpy
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -34,12 +35,20 @@ def arguments(project: Path, **overrides):
     return init_textbook.argparse.Namespace(**values)
 
 
-def tree_digest(root: Path) -> str:
-    digest = hashlib.sha256()
-    for path in sorted(item for item in root.rglob("*") if item.is_file()):
-        digest.update(str(path.relative_to(root)).encode())
-        digest.update(path.read_bytes())
-    return digest.hexdigest()
+def tree_snapshot(root: Path) -> tuple:
+    entries = []
+    for path in sorted(root.rglob("*")):
+        relative = str(path.relative_to(root))
+        stat = path.lstat()
+        if path.is_symlink():
+            entries.append((relative, "symlink", path.readlink(), stat.st_mode))
+        elif path.is_dir():
+            entries.append((relative, "directory", stat.st_mode))
+        else:
+            entries.append(
+                (relative, "file", hashlib.sha256(path.read_bytes()).hexdigest(), stat.st_mode)
+            )
+    return tuple(entries)
 
 
 class InitTextbookTests(unittest.TestCase):
@@ -81,13 +90,13 @@ class InitTextbookTests(unittest.TestCase):
             project = Path(directory)
             existing = project / ".gitignore"
             existing.write_text("keep-me\n", encoding="utf-8")
-            before = tree_digest(project)
+            before = tree_snapshot(project)
             config = init_textbook.build_config(arguments(project))
 
             with self.assertRaisesRegex(init_textbook.ScaffoldError, "refusing to overwrite"):
                 init_textbook.scaffold(config)
 
-            self.assertEqual(tree_digest(project), before)
+            self.assertEqual(tree_snapshot(project), before)
             self.assertFalse((project / "mkdocs.yml").exists())
 
     def test_dry_run_validates_without_writing(self):
@@ -100,21 +109,45 @@ class InitTextbookTests(unittest.TestCase):
             self.assertGreater(len(paths), 10)
             self.assertEqual(list(project.iterdir()), [])
 
+    def test_write_stages_on_project_filesystem_but_preview_does_not(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            config = init_textbook.build_config(arguments(project))
+            real_temporary_directory = tempfile.TemporaryDirectory
+            stage_parents = []
+
+            def capture_stage_parent(*args, **kwargs):
+                stage_parents.append(kwargs.get("dir"))
+                return real_temporary_directory(*args, **kwargs)
+
+            with mock.patch.object(
+                init_textbook.tempfile,
+                "TemporaryDirectory",
+                side_effect=capture_stage_parent,
+            ):
+                init_textbook.scaffold(config, dry_run=True)
+                init_textbook.scaffold(config)
+
+            self.assertEqual(stage_parents, [None, project])
+
     def test_write_failure_rolls_back_files_and_created_directories(self):
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
             config = init_textbook.build_config(arguments(project))
-            real_link = os.link
             calls = 0
 
-            def fail_second_link(source, destination):
+            real_copy = init_textbook.shutil.copyfileobj
+
+            def fail_second_copy(source, destination):
                 nonlocal calls
                 calls += 1
                 if calls == 2:
                     raise OSError("injected write failure")
-                return real_link(source, destination)
+                return real_copy(source, destination)
 
-            with mock.patch.object(init_textbook.os, "link", side_effect=fail_second_link):
+            with mock.patch.object(
+                init_textbook.shutil, "copyfileobj", side_effect=fail_second_copy
+            ):
                 with self.assertRaisesRegex(OSError, "injected write failure"):
                     init_textbook.scaffold(config)
 
@@ -169,14 +202,29 @@ class InitTextbookTests(unittest.TestCase):
 
     def test_template_comment_matches_explicit_image_only_hook(self):
         mkdocs = (TEMPLATE_ROOT / "mkdocs.yml").read_text(encoding="utf-8")
-        hook = (TEMPLATE_ROOT / "plugins" / "social_override.py").read_text(
-            encoding="utf-8"
-        )
+        hook_path = TEMPLATE_ROOT / "plugins" / "social_override.py"
+        hook = runpy.run_path(str(hook_path))
 
         self.assertIn("overrides og:image and twitter:image only when", mkdocs)
         self.assertIn("a page explicitly declares `image:`", mkdocs)
-        self.assertIn('if not image:\n        return html', hook)
         self.assertNotIn("falling back to the site-", mkdocs)
+        html = '<html><head><meta property="og:image" content="old"></head></html>'
+        no_image_page = types.SimpleNamespace(meta={})
+        image_page = types.SimpleNamespace(meta={"image": "img/cover.png"})
+        config = {"site_url": "https://example.com/book/"}
+        self.assertEqual(hook["on_post_page"](html, no_image_page, config), html)
+        rendered = hook["on_post_page"](html, image_page, config)
+        expected = "https://example.com/book/img/cover.png"
+        self.assertIn(f'property="og:image" content="{expected}"', rendered)
+        self.assertIn(f'name="twitter:image" content="{expected}"', rendered)
+
+    def test_manifest_covers_the_complete_canonical_template(self):
+        actual = {
+            path.relative_to(TEMPLATE_ROOT)
+            for path in TEMPLATE_ROOT.rglob("*")
+            if path.is_file()
+        }
+        self.assertEqual(init_textbook.REQUIRED_TEMPLATES, actual)
 
 
 if __name__ == "__main__":

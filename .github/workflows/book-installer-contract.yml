@@ -1,0 +1,28 @@
+name: Book installer contract
+
+on:
+  pull_request:
+    paths:
+      - "skills/book-installer/**"
+      - "commands/ibook.md"
+      - ".github/workflows/book-installer-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "skills/book-installer/**"
+      - "commands/ibook.md"
+      - ".github/workflows/book-installer-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  scaffold:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Test book installer contracts
+        run: python3 -m unittest discover -s skills/book-installer/tests -p 'test_*.py' -v

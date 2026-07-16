@@ -24,12 +24,20 @@ TEXT_SUFFIXES = {".css", ".md", ".py", ".yml", ".yaml"}
 EMPTY_DIRECTORIES = (Path("docs/js"),)
 REQUIRED_TEMPLATES = {
     Path(".gitignore"),
-    Path("mkdocs.yml"),
-    Path("project.code-workspace"),
-    Path("plugins/social_override.py"),
-    Path("docs/index.md"),
+    Path("docs/about.md"),
+    Path("docs/chapters/index.md"),
+    Path("docs/contact.md"),
+    Path("docs/course-description.md"),
+    Path("docs/css/extra.css"),
     Path("docs/img/cover.png"),
     Path("docs/img/license.png"),
+    Path("docs/index.md"),
+    Path("docs/learning-graph/index.md"),
+    Path("docs/license.md"),
+    Path("docs/sims/index.md"),
+    Path("mkdocs.yml"),
+    Path("plugins/social_override.py"),
+    Path("project.code-workspace"),
 }
 
 
@@ -239,7 +247,7 @@ def render_stage(config: ScaffoldConfig, stage: Path) -> list[Path]:
 
 
 def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]) -> None:
-    written: list[Path] = []
+    written: list[tuple[Path, tuple[int, int]]] = []
     created_directories: list[Path] = []
 
     def ensure_parent(directory: Path) -> None:
@@ -259,18 +267,39 @@ def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]
             source = stage / relative
             destination = config.project_dir / relative
             ensure_parent(destination.parent)
-            # Hard-linking is atomic, stays on the staging filesystem, and
-            # fails instead of replacing a destination created after preflight.
-            os.link(source, destination)
-            written.append(destination)
+            # Exclusive creation fails instead of replacing a destination that
+            # appeared after preflight. Recording its identity prevents
+            # rollback from deleting a file another actor swapped into place.
+            fd = os.open(
+                destination,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                source.stat().st_mode & 0o777,
+            )
+            created = os.fstat(fd)
+            identity = (created.st_dev, created.st_ino)
+            written.append((destination, identity))
+            try:
+                output = os.fdopen(fd, "wb")
+            except Exception:
+                os.close(fd)
+                raise
+            with source.open("rb") as input_file, output:
+                shutil.copyfileobj(input_file, output)
         for relative in EMPTY_DIRECTORIES:
             destination = config.project_dir / relative
             ensure_parent(destination.parent)
             destination.mkdir(parents=True, exist_ok=False)
             created_directories.append(destination)
     except Exception:
-        for destination in reversed(written):
-            if destination.exists():
+        for destination, identity in reversed(written):
+            try:
+                current = destination.lstat()
+            except FileNotFoundError:
+                continue
+            if (
+                not destination.is_symlink()
+                and (current.st_dev, current.st_ino) == identity
+            ):
                 destination.unlink()
         for destination in reversed(created_directories):
             try:
@@ -285,8 +314,12 @@ def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]
 
 def scaffold(config: ScaffoldConfig, dry_run: bool = False) -> list[Path]:
     destinations = preflight(config)
+    # A project can be a writable mount inside a read-only parent. For a real
+    # write, stage on the project's own filesystem; previews use system temp
+    # so the documented non-mutation contract includes the project directory.
+    stage_parent = config.project_dir if not dry_run else None
     with tempfile.TemporaryDirectory(
-        prefix=".init-textbook-", dir=config.project_dir.parent
+        prefix=".init-textbook-", dir=stage_parent
     ) as directory:
         stage = Path(directory)
         relative_paths = render_stage(config, stage)
