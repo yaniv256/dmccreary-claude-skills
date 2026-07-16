@@ -115,6 +115,10 @@ command. The initializer owns the write boundary and refuses the operation if
 **any** generated destination already exists, including `.gitignore`, the
 workspace file, hook, starter pages, images, and configuration.
 
+Safe publication requires directory-relative, no-follow filesystem operations.
+If the initializer reports that the current platform does not provide that
+contract, stop rather than bypassing it; run feature 0 from Linux or WSL.
+
 An existing destination means the directory needs a deliberate migration or
 another `book-installer` feature. Existing content is authoritative; feature 0
 has no force or merge mode.
@@ -406,6 +410,10 @@ files in sync — adding only one half is the failure mode.
 - **Never overwrite any generated destination.** The initializer's complete
   preflight is load-bearing: replacing even one existing config, page, hook,
   image, hidden file, or workspace can destroy user work that is hard to undo.
+- **Do not bypass an unsupported-platform refusal.** Pathname-only fallback
+  copying reopens the parent-symlink race that the initializer is designed to
+  close. Use Linux or WSL until a native implementation provides the same
+  no-follow publication guarantee.
 - **Confirm substitutions in one block before writing.** A typo in
   `REPO_NAME` ripples into the site URL, edit URI, and copyright link.
   Showing the resolved table and waiting for "yes" makes the error visible

@@ -17,10 +17,22 @@ from urllib.parse import urlparse
 
 TEMPLATE_ROOT = Path(__file__).parents[1] / "assets" / "init-textbook"
 TOKEN_PATTERN = re.compile(r"\{\{([A-Z_]+)\}\}")
-GITHUB_USERNAME_PATTERN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")
+GITHUB_USERNAME_PATTERN = re.compile(
+    r"(?!.*--)[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?"
+)
 REPO_NAME_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
-TEXT_FILENAMES = {".gitignore"}
-TEXT_SUFFIXES = {".css", ".md", ".py", ".yml", ".yaml"}
+BINARY_TEMPLATES = {
+    Path("docs/img/cover.png"),
+    Path("docs/img/license.png"),
+}
+SAFE_DIR_FD_SUPPORTED = (
+    hasattr(os, "O_DIRECTORY")
+    and hasattr(os, "O_NOFOLLOW")
+    and all(
+        function in os.supports_dir_fd
+        for function in (os.open, os.mkdir, os.stat, os.unlink, os.rmdir)
+    )
+)
 EMPTY_DIRECTORIES = (Path("docs/js"),)
 REQUIRED_TEMPLATES = {
     Path(".gitignore"),
@@ -42,7 +54,7 @@ REQUIRED_TEMPLATES = {
 
 
 class ScaffoldError(ValueError):
-    """Raised before the scaffold write boundary when input is unsafe."""
+    """Raised when validation or safe scaffold publication cannot complete."""
 
 
 @dataclass(frozen=True)
@@ -147,10 +159,6 @@ def template_files() -> list[Path]:
     return files
 
 
-def is_text_template(path: Path) -> bool:
-    return path.name in TEXT_FILENAMES or path.suffix in TEXT_SUFFIXES
-
-
 def render_yaml_scalars(text: str, values: dict[str, str]) -> str:
     # Escape substitutions anywhere inside a single-quoted YAML scalar. This
     # covers both scalar-only tokens and interpolated values such as copyright.
@@ -222,12 +230,21 @@ def preflight(config: ScaffoldConfig) -> list[Path]:
 def render_stage(config: ScaffoldConfig, stage: Path) -> list[Path]:
     rendered_paths: list[Path] = []
     for source in template_files():
+        source_relative = source.relative_to(TEMPLATE_ROOT)
         relative = destination_relative_path(source, config)
         destination = stage / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
-        if is_text_template(source):
+        if source_relative in BINARY_TEMPLATES:
+            shutil.copyfile(source, destination)
+        else:
+            try:
+                text = source.read_text(encoding="utf-8")
+            except UnicodeDecodeError as error:
+                raise ScaffoldError(
+                    f"nonbinary template is not valid UTF-8: {source_relative}"
+                ) from error
             rendered = render_text(
-                source.read_text(encoding="utf-8"),
+                text,
                 config.values,
                 yaml=source.suffix in {".yml", ".yaml"},
                 markdown_frontmatter=source.suffix == ".md",
@@ -238,8 +255,6 @@ def render_stage(config: ScaffoldConfig, stage: Path) -> list[Path]:
                     f"unresolved placeholders in {relative}: {', '.join(unresolved)}"
                 )
             destination.write_text(rendered, encoding="utf-8")
-        else:
-            shutil.copyfile(source, destination)
         rendered_paths.append(relative)
     for relative in EMPTY_DIRECTORIES:
         (stage / relative).mkdir(parents=True, exist_ok=False)
@@ -247,37 +262,130 @@ def render_stage(config: ScaffoldConfig, stage: Path) -> list[Path]:
 
 
 def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]) -> None:
-    written: list[tuple[Path, tuple[int, int]]] = []
-    created_directories: list[Path] = []
+    if not SAFE_DIR_FD_SUPPORTED:
+        raise ScaffoldError(
+            "safe publication requires directory-relative, no-follow filesystem support"
+        )
 
-    def ensure_parent(directory: Path) -> None:
-        missing: list[Path] = []
-        candidate = directory
-        while candidate != config.project_dir and not candidate.exists():
-            missing.append(candidate)
-            candidate = candidate.parent
-        if candidate.is_symlink() or not candidate.is_dir():
-            raise ScaffoldError(f"unsafe output parent appeared during write: {candidate}")
-        for path in reversed(missing):
-            path.mkdir()
-            created_directories.append(path)
+    def identity(stat_result: os.stat_result) -> tuple[int, int]:
+        return (stat_result.st_dev, stat_result.st_ino)
 
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    try:
+        root_fd = os.open(config.project_dir, directory_flags)
+    except OSError as error:
+        raise ScaffoldError(f"could not open project directory safely: {error}") from error
+
+    root_identity = identity(os.fstat(root_fd))
+    directory_fds: dict[Path, int] = {Path("."): root_fd}
+    directory_identities: dict[Path, tuple[int, int]] = {
+        Path("."): root_identity
+    }
+    written: list[tuple[int, str, tuple[int, int]]] = []
+    created_directories: list[tuple[int, str, tuple[int, int]]] = []
+
+    def open_directory(relative: Path) -> int:
+        relative = Path(".") if not relative.parts else relative
+        if relative in directory_fds:
+            return directory_fds[relative]
+
+        current_relative = Path(".")
+        current_fd = root_fd
+        for part in relative.parts:
+            next_relative = Path(part) if current_relative == Path(".") else current_relative / part
+            if next_relative in directory_fds:
+                current_relative = next_relative
+                current_fd = directory_fds[next_relative]
+                continue
+
+            created_identity: tuple[int, int] | None = None
+            try:
+                os.mkdir(part, dir_fd=current_fd)
+            except FileExistsError:
+                pass
+            else:
+                created_stat = os.stat(
+                    part, dir_fd=current_fd, follow_symlinks=False
+                )
+                created_identity = identity(created_stat)
+                created_directories.append(
+                    (current_fd, part, created_identity)
+                )
+
+            try:
+                next_fd = os.open(part, directory_flags, dir_fd=current_fd)
+            except OSError as error:
+                raise ScaffoldError(
+                    f"unsafe output directory appeared during write: {next_relative}"
+                ) from error
+            next_identity = identity(os.fstat(next_fd))
+            if created_identity is not None and next_identity != created_identity:
+                os.close(next_fd)
+                raise ScaffoldError(
+                    f"output directory changed while being created: {next_relative}"
+                )
+            directory_fds[next_relative] = next_fd
+            directory_identities[next_relative] = next_identity
+            current_relative = next_relative
+            current_fd = next_fd
+        return current_fd
+
+    def verify_published_paths() -> None:
+        try:
+            current_root = config.project_dir.lstat()
+        except FileNotFoundError as error:
+            raise ScaffoldError("project directory disappeared during write") from error
+        if config.project_dir.is_symlink() or identity(current_root) != root_identity:
+            raise ScaffoldError("project directory changed during write")
+
+        for relative, expected in directory_identities.items():
+            if relative == Path("."):
+                continue
+            current_fd = root_fd
+            opened: list[int] = []
+            try:
+                for part in relative.parts:
+                    current_fd = os.open(
+                        part, directory_flags, dir_fd=current_fd
+                    )
+                    opened.append(current_fd)
+                if identity(os.fstat(current_fd)) != expected:
+                    raise ScaffoldError(
+                        f"output directory changed during write: {relative}"
+                    )
+            except OSError as error:
+                raise ScaffoldError(
+                    f"output directory became unsafe during write: {relative}"
+                ) from error
+            finally:
+                for fd in reversed(opened):
+                    os.close(fd)
+
+        for parent_fd, name, expected in written:
+            try:
+                current = os.stat(
+                    name, dir_fd=parent_fd, follow_symlinks=False
+                )
+            except FileNotFoundError as error:
+                raise ScaffoldError(
+                    f"output file disappeared during write: {name}"
+                ) from error
+            if identity(current) != expected:
+                raise ScaffoldError(f"output file changed during write: {name}")
+
+    failure: Exception | None = None
     try:
         for relative in relative_paths:
             source = stage / relative
-            destination = config.project_dir / relative
-            ensure_parent(destination.parent)
-            # Exclusive creation fails instead of replacing a destination that
-            # appeared after preflight. Recording its identity prevents
-            # rollback from deleting a file another actor swapped into place.
+            parent_fd = open_directory(relative.parent)
             fd = os.open(
-                destination,
+                relative.name,
                 os.O_WRONLY | os.O_CREAT | os.O_EXCL,
                 source.stat().st_mode & 0o777,
+                dir_fd=parent_fd,
             )
             created = os.fstat(fd)
-            identity = (created.st_dev, created.st_ino)
-            written.append((destination, identity))
+            written.append((parent_fd, relative.name, identity(created)))
             try:
                 output = os.fdopen(fd, "wb")
             except Exception:
@@ -286,30 +394,43 @@ def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]
             with source.open("rb") as input_file, output:
                 shutil.copyfileobj(input_file, output)
         for relative in EMPTY_DIRECTORIES:
-            destination = config.project_dir / relative
-            ensure_parent(destination.parent)
-            destination.mkdir(parents=True, exist_ok=False)
-            created_directories.append(destination)
-    except Exception:
-        for destination, identity in reversed(written):
+            open_directory(relative)
+        verify_published_paths()
+    except Exception as error:
+        failure = error
+        for parent_fd, name, expected in reversed(written):
             try:
-                current = destination.lstat()
+                current = os.stat(
+                    name, dir_fd=parent_fd, follow_symlinks=False
+                )
             except FileNotFoundError:
                 continue
-            if (
-                not destination.is_symlink()
-                and (current.st_dev, current.st_ino) == identity
-            ):
-                destination.unlink()
-        for destination in reversed(created_directories):
+            if identity(current) == expected:
+                os.unlink(name, dir_fd=parent_fd)
+        for parent_fd, name, expected in reversed(created_directories):
             try:
-                destination.rmdir()
+                current = os.stat(
+                    name, dir_fd=parent_fd, follow_symlinks=False
+                )
             except FileNotFoundError:
-                pass
+                continue
+            if identity(current) != expected:
+                continue
+            try:
+                os.rmdir(name, dir_fd=parent_fd)
             except OSError:
-                # Preserve any path populated concurrently by another actor.
-                pass
-        raise
+                # Preserve a directory populated concurrently by another actor.
+                continue
+    finally:
+        for relative, fd in reversed(list(directory_fds.items())):
+            if relative != Path("."):
+                os.close(fd)
+        os.close(root_fd)
+
+    if failure is not None:
+        if isinstance(failure, ScaffoldError):
+            raise failure
+        raise ScaffoldError(f"could not publish scaffold safely: {failure}") from failure
 
 
 def scaffold(config: ScaffoldConfig, dry_run: bool = False) -> list[Path]:

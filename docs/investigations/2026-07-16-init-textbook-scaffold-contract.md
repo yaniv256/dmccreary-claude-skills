@@ -77,14 +77,17 @@ that weak boundary and then accumulated config-comment and GitHub-link drift.
    quoted YAML contexts rather than relying on raw replacement.
 4. Copy hidden and binary assets, rename the workspace deterministically, and
    fail if any placeholder remains.
-5. Correct the GitHub edit URI and the social-hook comment.
-6. Route every feature-0 entry point and example through the initializer and
+5. Publish relative to verified directory descriptors, reject parent symlinks
+   and swaps, and fail explicitly where the platform cannot provide that
+   no-follow contract.
+6. Correct the GitHub edit URI and the social-hook comment.
+7. Route every feature-0 entry point and example through the initializer and
    make strict build plus social metadata checks agent-owned verification, not
    merely commands suggested to the user.
-7. Add focused tests for happy-path output, punctuation-safe metadata,
+8. Add focused tests for happy-path output, punctuation-safe metadata,
    collision atomicity, preview non-mutation, hidden/binary assets, unresolved
    placeholders, and generated configuration semantics.
-8. Run the representative scaffold against a real MkDocs Material build,
+9. Run the representative scaffold against a real MkDocs Material build,
    complete independent review, merge, and read back from `origin/main`.
 
 ## Closure criteria

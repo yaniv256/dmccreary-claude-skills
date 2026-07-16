@@ -80,7 +80,7 @@ class InitTextbookTests(unittest.TestCase):
                 "\n".join(
                     path.read_text(encoding="utf-8")
                     for path in project.rglob("*")
-                    if path.is_file() and init_textbook.is_text_template(path)
+                    if path.is_file() and path.suffix != ".png"
                 ),
                 init_textbook.TOKEN_PATTERN,
             )
@@ -148,7 +148,9 @@ class InitTextbookTests(unittest.TestCase):
             with mock.patch.object(
                 init_textbook.shutil, "copyfileobj", side_effect=fail_second_copy
             ):
-                with self.assertRaisesRegex(OSError, "injected write failure"):
+                with self.assertRaisesRegex(
+                    init_textbook.ScaffoldError, "injected write failure"
+                ):
                     init_textbook.scaffold(config)
 
             self.assertEqual(list(project.iterdir()), [])
@@ -165,7 +167,7 @@ class InitTextbookTests(unittest.TestCase):
                 raced_destination = project / ".gitignore"
                 raced_destination.write_text("created concurrently\n", encoding="utf-8")
 
-                with self.assertRaises(FileExistsError):
+                with self.assertRaises(init_textbook.ScaffoldError):
                     init_textbook.commit_stage(config, stage, relative_paths)
 
             self.assertEqual(
@@ -173,6 +175,43 @@ class InitTextbookTests(unittest.TestCase):
                 "created concurrently\n",
             )
             self.assertEqual([path.name for path in project.iterdir()], [".gitignore"])
+
+    def test_parent_swap_is_detected_without_writing_through_symlink(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "project"
+            outside = Path(directory) / "outside"
+            project.mkdir()
+            outside.mkdir()
+            config = init_textbook.build_config(arguments(project))
+            real_open = init_textbook.os.open
+            swapped = False
+
+            def swap_parent_before_leaf(path, flags, mode=0o777, *, dir_fd=None):
+                nonlocal swapped
+                if path == "about.md" and dir_fd is not None and not swapped:
+                    swapped = True
+                    (project / "docs").rename(project / "docs-original")
+                    (project / "docs").symlink_to(outside, target_is_directory=True)
+                return real_open(path, flags, mode, dir_fd=dir_fd)
+
+            with mock.patch.object(init_textbook.os, "open", side_effect=swap_parent_before_leaf):
+                with self.assertRaisesRegex(
+                    init_textbook.ScaffoldError, "directory became unsafe"
+                ):
+                    init_textbook.scaffold(config)
+
+            self.assertEqual(list(outside.iterdir()), [])
+            self.assertFalse(any((project / "docs-original").rglob("*")))
+
+    def test_rejects_github_username_with_consecutive_hyphens(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            with self.assertRaisesRegex(
+                init_textbook.ScaffoldError, "valid GitHub account"
+            ):
+                init_textbook.build_config(
+                    arguments(project, github_username="foo--bar")
+                )
 
     def test_invalid_metadata_fails_without_writing(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -225,6 +264,10 @@ class InitTextbookTests(unittest.TestCase):
             if path.is_file()
         }
         self.assertEqual(init_textbook.REQUIRED_TEMPLATES, actual)
+        self.assertEqual(
+            init_textbook.BINARY_TEMPLATES,
+            {Path("docs/img/cover.png"), Path("docs/img/license.png")},
+        )
 
 
 if __name__ == "__main__":
