@@ -533,12 +533,12 @@ Each guide contains:
 - `docs/chapters/*/references.md` — per-chapter reference lists (via `reference-generator` skill)
 - `docs/img/cover.png` — book cover image + social-preview hook (via `cover-image-generator.md` + `social-media-preview.md`)
 - Book metrics report (via `bk-generate-book-metrics` script)
-- Diagram reports (via `bk-diagram-reports` script)
+- Optional legacy diagram-specification reports (via `bk-diagram-reports`; only when the source schema exists)
 - `README.md` — GitHub-facing README after metrics, so it can embed content counts (via the `book-publisher` readme route — skill)
 - `docs/index.md` — main landing page last, so it can link to all of the above (via `home-page-template.md`)
 - Updated `mkdocs.yml` nav entries for all generated files
 
-**Execution order:** about → glossary → FAQ → quizzes → references → cover image → metrics → diagram reports → README → landing page → nav update → verification
+**Execution order:** about → glossary → FAQ → quizzes → references → cover image → metrics → optional legacy diagram-specification reports → README → landing page → nav update → verification
 
 **Model guidance:** All text-generation steps use Sonnet. Any MicroSim created during this workflow must use `claude-opus-4-7` with `high` thinking — Opus is significantly better at the coding and spatial reasoning MicroSims require.
 

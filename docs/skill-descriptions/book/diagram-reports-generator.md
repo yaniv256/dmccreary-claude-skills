@@ -1,5 +1,10 @@
 # Diagram Reports Generator
 
+> **Legacy snapshot.** The active route is
+> `microsim-utils/references/diagram-reports.md`. It inventories only legacy
+> `#### Diagram:` specification blocks and must not be used as a rendered-visual
+> inventory or instructional-quality gate.
+
 The diagram-reports-generator skill automatically generates comprehensive reports
 of all diagrams and MicroSims in an intelligent textbook by analyzing chapter
 markdown files. It creates both table and detailed views organized by chapter.

@@ -29,9 +29,9 @@ Usage:
     python diagram-report.py -v
 """
 
-import os
 import re
 import csv
+import html as html_lib
 from pathlib import Path
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple
@@ -52,6 +52,9 @@ class VisualElement:
     status: str = ""  # Implementation status
     learning_objective: str = ""
     specifications: str = ""
+    source_file: str = ""
+    microsim_recommendations: List[Tuple[str, int]] = field(default_factory=list)
+    microsim_recommendations_text: str = ""
 
     def to_dict(self) -> Dict:
         """Convert to dictionary for CSV export"""
@@ -64,7 +67,10 @@ class VisualElement:
             'Bloom Levels': ', '.join(self.bloom_levels),
             'UI Elements': self.ui_elements_count,
             'Difficulty': self.estimated_difficulty,
-            'Learning Objective': self.learning_objective[:100] + '...' if len(self.learning_objective) > 100 else self.learning_objective
+            'Learning Objective': self.learning_objective[:100] + '...' if len(self.learning_objective) > 100 else self.learning_objective,
+            'MicroSim Recommendations': '; '.join(
+                f"{name} ({score})" for name, score in self.microsim_recommendations
+            ),
         }
 
 
@@ -80,6 +86,13 @@ class DiagramAnalyzer:
     BLOOM_PATTERN = re.compile(r'Bloom\'?s Taxonomy[:\s]+(.*?)(?:\)|\.|\n|\r)', re.IGNORECASE)
     LEARNING_OBJ_PATTERN = re.compile(r'\*\*Learning Objective:\*\*\s*(.*?)(?:\n\*\*|\r\n\*\*|\n\n|\r\r)', re.DOTALL | re.IGNORECASE)
     STATUS_PATTERN = re.compile(r'\*\*Status:\*\*\s*(.*?)(?:\n\n|\r\n\r\n|\n\*\*|\r\*\*|\n|\r)', re.IGNORECASE)
+    MICROSIM_RECOMMENDATIONS_PATTERN = re.compile(
+        r'\*\*MicroSim Generator Recommendations:\*\*\s*(.*?)(?=</details>|$)',
+        re.DOTALL | re.IGNORECASE,
+    )
+    RECOMMENDATION_LINE_PATTERN = re.compile(
+        r'\d+\.\s+([a-z0-9-]+)\s+\((\d+)/100\)', re.IGNORECASE
+    )
 
     # UI element keywords to count
     UI_KEYWORDS = [
@@ -91,24 +104,26 @@ class DiagramAnalyzer:
         self.chapters_dir = Path(chapters_dir)
         self.elements: List[VisualElement] = []
         self.verbose = verbose
+        self.chapter_files: List[Path] = []
+        self.errors: List[str] = []
+
+    def discover_chapter_files(self) -> List[Path]:
+        """Find numbered chapters in either flat or nested textbook layouts."""
+        flat = self.chapters_dir.glob('[0-9][0-9]-*.md')
+        nested = self.chapters_dir.glob('[0-9][0-9]-*/index.md')
+        return sorted((*flat, *nested), key=lambda path: path.relative_to(self.chapters_dir).as_posix())
 
     def analyze_all_chapters(self):
         """Analyze all chapter directories"""
-        # Get all numbered chapter directories (01-*, 02-*, etc.)
-        chapter_dirs = sorted([d for d in self.chapters_dir.iterdir()
-                              if d.is_dir() and re.match(r'^\d{2}-', d.name)])
+        self.chapter_files = self.discover_chapter_files()
 
         if self.verbose:
-            print(f"\nFound {len(chapter_dirs)} chapter directories:")
-            for d in chapter_dirs:
-                print(f"  - {d.name}")
+            print(f"\nFound {len(self.chapter_files)} chapter files:")
+            for path in self.chapter_files:
+                print(f"  - {path.relative_to(self.chapters_dir)}")
 
-        for chapter_dir in chapter_dirs:
-            index_file = chapter_dir / 'index.md'
-            if index_file.exists():
-                self.analyze_chapter_file(index_file)
-            elif self.verbose:
-                print(f"  Warning: No index.md in {chapter_dir.name}")
+        for chapter_file in self.chapter_files:
+            self.analyze_chapter_file(chapter_file)
 
     def analyze_chapter_file(self, file_path: Path):
         """Analyze a single chapter markdown file"""
@@ -116,21 +131,21 @@ class DiagramAnalyzer:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Extract chapter number and name from directory
-            chapter_dir_name = file_path.parent.name
-            match = re.match(r'^(\d{2})-(.*)', chapter_dir_name)
+            relative_source = file_path.relative_to(self.chapters_dir).as_posix()
+            chapter_slug = file_path.parent.name if file_path.name == 'index.md' else file_path.stem
+            match = re.match(r'^(\d{2})-(.*)', chapter_slug)
             if match:
                 chapter_num = match.group(1)
                 chapter_name = match.group(2).replace('-', ' ').title()
             else:
                 chapter_num = "??"
-                chapter_name = chapter_dir_name
+                chapter_name = chapter_slug
 
             # Find all header + <details> blocks first (preferred method)
             header_details_blocks = list(self.HEADER_DETAILS_PATTERN.finditer(content))
 
             if self.verbose:
-                print(f"\n  Analyzing {file_path.parent.name}/index.md:")
+                print(f"\n  Analyzing {relative_source}:")
                 print(f"    Found {len(header_details_blocks)} header+details blocks")
 
             elements_found = 0
@@ -138,7 +153,13 @@ class DiagramAnalyzer:
                 header_title = match.group(1).strip()
                 # group(2) is now the content between header and details (iframe, etc.)
                 details_content = match.group(3)  # The actual details content
-                element = self.parse_details_block(details_content, chapter_num, chapter_name, chapter_dir_name, header_title)
+                element = self.parse_details_block(
+                    details_content,
+                    chapter_num,
+                    chapter_name,
+                    relative_source,
+                    header_title,
+                )
                 if element:
                     self.elements.append(element)
                     elements_found += 1
@@ -149,12 +170,14 @@ class DiagramAnalyzer:
                 print(f"    Added {elements_found} elements")
 
         except Exception as e:
-            print(f"Error analyzing {file_path}: {e}")
+            message = f"Error analyzing {file_path}: {e}"
+            self.errors.append(message)
+            print(message)
             if self.verbose:
                 import traceback
                 traceback.print_exc()
 
-    def parse_details_block(self, content: str, chapter_num: str, chapter_name: str, chapter_dir: str, header_title: str = None) -> VisualElement:
+    def parse_details_block(self, content: str, chapter_num: str, chapter_name: str, source_file: str, header_title: str = None) -> VisualElement:
         """Parse a single <details> block to extract element information"""
         # Use header title if provided, otherwise extract from <summary>
         if header_title:
@@ -196,6 +219,9 @@ class DiagramAnalyzer:
         # Extract status
         status = self.extract_status(content)
 
+        # Extract optional recommendations produced by the MicroSim router.
+        microsim_recommendations, microsim_text = self.extract_microsim_recommendations(content)
+
         # Count UI elements
         ui_count = self.count_ui_elements(content)
 
@@ -205,7 +231,7 @@ class DiagramAnalyzer:
         return VisualElement(
             chapter_num=chapter_num,
             chapter_name=chapter_name,
-            chapter_dir=chapter_dir,
+            chapter_dir=str(Path(source_file).parent),
             element_title=title,
             element_type=element_type,
             bloom_levels=bloom_levels,
@@ -213,7 +239,10 @@ class DiagramAnalyzer:
             estimated_difficulty=difficulty,
             status=status,
             learning_objective=learning_obj,
-            specifications=content[:500]  # Store first 500 chars of specs
+            specifications=content[:500],  # Store first 500 chars of specs
+            source_file=source_file,
+            microsim_recommendations=microsim_recommendations,
+            microsim_recommendations_text=microsim_text,
         )
 
     def extract_bloom_levels(self, content: str) -> List[str]:
@@ -254,6 +283,22 @@ class DiagramAnalyzer:
         if status_match:
             return status_match.group(1).strip()
         return ""
+
+    def extract_microsim_recommendations(self, content: str) -> Tuple[List[Tuple[str, int]], str]:
+        """Extract optional generator recommendations and their scores."""
+        recommendations_match = self.MICROSIM_RECOMMENDATIONS_PATTERN.search(content)
+        if not recommendations_match:
+            return ([], "")
+
+        recommendations_text = recommendations_match.group(1).strip()
+        recommendations = [
+            (match.group(1), int(match.group(2)))
+            for match in self.RECOMMENDATION_LINE_PATTERN.finditer(recommendations_text)
+        ]
+        return (
+            recommendations,
+            f"**MicroSim Generator Recommendations:**\n{recommendations_text}",
+        )
 
     def count_ui_elements(self, content: str) -> int:
         """Count the number of UI elements mentioned in specifications"""
@@ -323,6 +368,14 @@ class ReportGenerator:
     def __init__(self, elements: List[VisualElement]):
         self.elements = elements
 
+    @staticmethod
+    def chapter_link(element: VisualElement) -> str:
+        """Build a link for either a flat chapter file or nested index file."""
+        anchor = re.sub(
+            r"[^a-z0-9]+", "-", f"diagram-{element.element_title}".lower()
+        ).strip("-")
+        return f"../chapters/{element.source_file}#{anchor}"
+
     def generate_markdown_table(self) -> str:
         """Generate Markdown table report"""
         lines = [
@@ -354,26 +407,21 @@ class ReportGenerator:
             "",
             "## All Visual Elements",
             "",
-            "| Chapter | Element Title | Status | Type | Bloom Levels | UI Elements | Difficulty |",
-            "|---------|---------------|--------|------|--------------|-------------|------------|"
+            "| Chapter | Element Title | Status | Type | Bloom Levels | UI Mentions | Planning Heuristic | Recommended MicroSims |",
+            "|---------|---------------|--------|------|--------------|-------------|--------------------|-----------------------|"
         ])
 
         for element in sorted(self.elements, key=lambda e: (e.chapter_num, e.element_title)):
             bloom_str = ', '.join(element.bloom_levels)
-            # Create link to chapter section with "Diagram:" prefix
-            # MkDocs anchor: lowercase, spaces to hyphens, remove most punctuation except hyphens
-            anchor_text = f"diagram-{element.element_title}"
-            anchor = anchor_text.lower().replace(' ', '-').replace('/', '-').replace('(', '').replace(')', '').replace(',', '').replace('.', '').replace(':', '')
-            # Clean up multiple consecutive hyphens
-            while '--' in anchor:
-                anchor = anchor.replace('--', '-')
-            chapter_link = f"../chapters/{element.chapter_dir}/index.md#{anchor}"
-            element_link = f"[{element.element_title}]({chapter_link})"
+            element_link = f"[{element.element_title}]({self.chapter_link(element)})"
             status_display = element.status if element.status else ""
+            microsim_str = '<br>'.join(
+                f"{name} ({score})" for name, score in element.microsim_recommendations
+            )
             lines.append(
                 f"| {int(element.chapter_num)} | {element_link} | "
                 f"{status_display} | {element.element_type.title()} | {bloom_str} | "
-                f"{element.ui_elements_count} | {element.estimated_difficulty} |"
+                f"{element.ui_elements_count} | {element.estimated_difficulty} | {microsim_str} |"
             )
 
         return '\n'.join(lines)
@@ -410,23 +458,17 @@ class ReportGenerator:
             ])
 
             for element in sorted(elements, key=lambda e: e.element_title):
-                # Create link to chapter section
-                # MkDocs anchor: lowercase, spaces to hyphens, remove most punctuation except hyphens
-                anchor_text = f"diagram-{element.element_title}"
-                anchor = anchor_text.lower().replace(' ', '-').replace('/', '-').replace('(', '').replace(')', '').replace(',', '').replace('.', '').replace(':', '')
-                # Clean up multiple consecutive hyphens
-                while '--' in anchor:
-                    anchor = anchor.replace('--', '-')
-                chapter_link = f"../chapters/{element.chapter_dir}/index.md#{anchor}"
-                lines.append(f"### [{element.element_title}]({chapter_link})")
+                lines.append(f"### [{element.element_title}]({self.chapter_link(element)})")
                 if element.status:
                     lines.append(f"- **Status:** {element.status}")
                 lines.append(f"- **Type:** {element.element_type.title()}")
                 lines.append(f"- **Bloom's Taxonomy:** {', '.join(element.bloom_levels)}")
-                lines.append(f"- **UI Elements:** {element.ui_elements_count}")
-                lines.append(f"- **Difficulty:** {element.estimated_difficulty}")
+                lines.append(f"- **UI keyword mentions:** {element.ui_elements_count}")
+                lines.append(f"- **Planning heuristic:** {element.estimated_difficulty}")
                 if element.learning_objective:
                     lines.append(f"- **Learning Objective:** {element.learning_objective[:150]}...")
+                if element.microsim_recommendations_text:
+                    lines.extend(["", element.microsim_recommendations_text])
                 lines.append("")
 
         return '\n'.join(lines)
@@ -434,8 +476,9 @@ class ReportGenerator:
     def generate_csv(self, output_file: str):
         """Generate CSV format report"""
         with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
-            fieldnames = ['Chapter', 'Chapter Name', 'Element Title', 'Type',
-                         'Bloom Levels', 'UI Elements', 'Difficulty', 'Learning Objective']
+            fieldnames = ['Chapter', 'Chapter Name', 'Element Title', 'Status', 'Type',
+                         'Bloom Levels', 'UI Elements', 'Difficulty', 'Learning Objective',
+                         'MicroSim Recommendations']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
             writer.writeheader()
@@ -583,26 +626,32 @@ class ReportGenerator:
                 <th>Element Title</th>
                 <th>Type</th>
                 <th>Bloom Levels</th>
-                <th>UI Elements</th>
-                <th>Difficulty</th>
+                <th>UI Mentions</th>
+                <th>Planning Heuristic</th>
+                <th>Recommended MicroSims</th>
             </tr>
         </thead>
         <tbody>
 """
 
         for element in sorted(self.elements, key=lambda e: (e.chapter_num, e.element_title)):
-            bloom_str = ', '.join(element.bloom_levels)
+            bloom_str = html_lib.escape(', '.join(element.bloom_levels))
             difficulty_class = f"difficulty-{element.estimated_difficulty.lower().replace(' ', '-')}"
             type_class = f"type-{element.element_type}"
+            recommendations = '<br>'.join(
+                f"{html_lib.escape(name)} ({score})"
+                for name, score in element.microsim_recommendations
+            )
 
             html += f"""
             <tr class="{type_class}">
                 <td><strong>{int(element.chapter_num)}</strong></td>
-                <td>{element.element_title}</td>
-                <td><em>{element.element_type.title()}</em></td>
+                <td>{html_lib.escape(element.element_title)}</td>
+                <td><em>{html_lib.escape(element.element_type.title())}</em></td>
                 <td><small>{bloom_str}</small></td>
                 <td style="text-align: center;">{element.ui_elements_count}</td>
-                <td class="{difficulty_class}">{element.estimated_difficulty}</td>
+                <td class="{difficulty_class}">{html_lib.escape(element.estimated_difficulty)}</td>
+                <td><small>{recommendations}</small></td>
             </tr>
 """
 
@@ -641,6 +690,11 @@ def main():
         '-v', '--verbose',
         action='store_true',
         help='Enable verbose output for debugging'
+    )
+    parser.add_argument(
+        '--allow-empty',
+        action='store_true',
+        help='Write an empty report instead of failing when no legacy specification blocks are found'
     )
 
     args = parser.parse_args()
@@ -694,7 +748,27 @@ def main():
     analyzer = DiagramAnalyzer(str(chapters_dir), verbose=args.verbose)
     analyzer.analyze_all_chapters()
 
+    if not analyzer.chapter_files:
+        print(
+            "Error: No numbered chapter files found. Expected either "
+            "docs/chapters/01-name.md or docs/chapters/01-name/index.md."
+        )
+        return 1
+
+    if analyzer.errors:
+        print(f"Error: {len(analyzer.errors)} chapter file(s) could not be analyzed.")
+        return 1
+
     print(f"Found {len(analyzer.elements)} visual elements")
+
+    if not analyzer.elements and not args.allow_empty:
+        print(
+            "Error: No legacy diagram specification blocks were found. This utility "
+            "only inventories '#### Diagram:' headers followed by <details> specs; "
+            "it does not inventory rendered figures, images, or iframes. Use "
+            "--allow-empty only when an empty specification report is intentional."
+        )
+        return 2
 
     # Generate report
     generator = ReportGenerator(analyzer.elements)
