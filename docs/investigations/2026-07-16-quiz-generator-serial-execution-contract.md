@@ -2,7 +2,7 @@
 
 ## Status
 
-OPEN
+RESOLVED
 
 ## Incident
 
@@ -94,7 +94,8 @@ regression gate covering adjacent documentation.
    class and record separate defects outside this skill's ownership boundary.
 7. Run focused and repository validation.
 8. Merge through a reviewed pull request and verify the default branch.
-9. Run CE Compound and restore the blocked parent skill-evaluation task.
+9. Run CE Compound; then reconcile the blocked parent skill-evaluation task on
+   the Trello board.
 
 ## Phase 6: Class search
 
@@ -118,12 +119,28 @@ workflow.
 - No current workflow text makes parallel execution the default or token-neutral.
 - Required and optional outputs agree across both surfaces.
 - Focused regression tests detect the original defect and pass after remediation.
-- Repository validation and CI pass.
+- Repository validation passes; configured GitHub checks pass when present.
 - The fix is merged and independently read back from the default branch.
 - The reusable prevention lesson is compounded or a verified existing solution
   is recorded as the owner.
-- The blocked parent Trello card returns to Next after this investigation enters Done.
 
 ## Closure evidence
 
-Pending remediation.
+- Source remediation merged through
+  [PR #16](https://github.com/yaniv256/dmccreary-claude-skills/pull/16)
+  at merge commit `6b28cd525019a9e0c14dbefe1964985f4049b039`.
+- Independent GitHub API reads from `main` confirmed the v0.4 README, the
+  serial-only operating skill, and the focused contract test after merge.
+- The focused suite passes 5 of 5 tests and fails all 5 against source commit
+  `43507a05`, proving it detects the original contradiction.
+- Twenty-four adjacent tests pass across book installer, book publisher,
+  glossary, learning graph, book metrics, and MicroSim validation.
+- A strict documentation build completes with
+  `mkdocs-material[imaging]` and `mkdocs-glightbox` in an isolated `uvx`
+  environment. GitHub reported no configured checks for PR #16.
+- The repository class search produced a separate investigation for the
+  contradictory `chapter-content-generator` policy rather than silently
+  widening this fix.
+- CE Compound captured the reusable behavioral-contract pattern in
+  `docs/solutions/logic-errors/behavioral-documentation-needs-executable-contracts.md`
+  and cross-linked the existing numeric-rubric pattern.
