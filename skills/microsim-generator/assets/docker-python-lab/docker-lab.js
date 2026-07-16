@@ -32,6 +32,40 @@ function _dockerIsConnectError(err) {
          err.message.includes('net::ERR');
 }
 
+function _dockerTimingValue(value) {
+  return typeof value === 'number' && isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+
+function _dockerTimingBreakdown(total, timing) {
+  var dockerTotal = _dockerTimingValue(timing.docker_total_ms);
+  var serverOverhead = _dockerTimingValue(timing.server_overhead_ms);
+  var startup = _dockerTimingValue(timing.container_startup_ms);
+  var exec = _dockerTimingValue(timing.python_exec_ms);
+  var timing_consistent = _dockerTimingValue(total) != null &&
+    dockerTotal != null && serverOverhead != null && startup != null && exec != null &&
+    serverOverhead + dockerTotal <= total && startup + exec <= dockerTotal;
+
+  if (!timing_consistent) {
+    return [
+      { id: 'roundtrip-overhead', ms: null },
+      { id: 'server-overhead', ms: null },
+      { id: 'startup', ms: null },
+      { id: 'exec', ms: null },
+      { id: 'container-overhead', ms: null },
+    ];
+  }
+
+  return [
+    { id: 'roundtrip-overhead', ms: total - serverOverhead - dockerTotal },
+    { id: 'server-overhead', ms: serverOverhead },
+    { id: 'startup', ms: startup },
+    { id: 'exec', ms: exec },
+    { id: 'container-overhead', ms: dockerTotal - startup - exec },
+  ];
+}
+
 function _dockerShowResult(outputEl, data) {
   outputEl.className = 'docker-output';
   if (data.returncode !== 0 && data.stderr) {
@@ -119,33 +153,25 @@ async function runDockerTimed(suffix) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ code: codeEl.value, show_timing: true }),
     });
-    var t_total = performance.now() - t0;
     if (!resp.ok) throw new Error('Service returned status ' + resp.status);
     var data = await resp.json();
+    var t_total = performance.now() - t0;
     var tm   = data.timing || {};
 
-    /* Break the round-trip into four phases. */
-    var docker_total    = tm.docker_total_ms      || 0;
-    var server_overhead = tm.server_overhead_ms   || 0;
-    var startup         = tm.container_startup_ms != null ? tm.container_startup_ms : docker_total;
-    var exec            = tm.python_exec_ms       || 0;
-    var network_total   = Math.max(0, t_total - server_overhead - docker_total);
-    var net_send        = network_total / 2;
-    var net_recv        = network_total / 2;
-
-    var phases = [
-      { id: 'network-send',   ms: net_send },
-      { id: 'startup',        ms: startup  },
-      { id: 'exec',           ms: exec     },
-      { id: 'network-return', ms: net_recv },
-    ];
-    var maxMs = Math.max.apply(null, phases.map(function(p) { return p.ms; }).concat([1]));
+    /* Reject inconsistent fields rather than manufacturing a plausible chart. */
+    var phases = _dockerTimingBreakdown(t_total, tm);
+    var exec = phases.filter(function(p) { return p.id === 'exec'; })[0].ms;
+    var maxMs = Math.max.apply(null, phases.map(function(p) {
+      return p.ms == null ? 0 : p.ms;
+    }).concat([1]));
 
     phases.forEach(function(p) {
       var td  = document.getElementById('td-'  + p.id);
       var bar = document.getElementById('bar-' + p.id);
-      if (td)  td.textContent    = p.ms.toFixed(1);
-      if (bar) bar.style.width   = Math.max(2, (p.ms / maxMs) * 200) + 'px';
+      if (td) td.textContent = p.ms == null ? 'not reported' : p.ms.toFixed(1);
+      if (bar) {
+        bar.style.width = p.ms == null ? '0' : Math.max(2, (p.ms / maxMs) * 200) + 'px';
+      }
     });
 
     var tdTotal = document.getElementById('td-total');
@@ -153,7 +179,7 @@ async function runDockerTimed(suffix) {
 
     var noteEl = document.getElementById('docker-timing-note');
     if (noteEl) {
-      noteEl.textContent = (tm.python_exec_ms != null)
+      noteEl.textContent = exec != null && t_total > 0
         ? 'Your Python code ran for ' + exec.toFixed(3) + ' ms — ' +
           ((exec / t_total) * 100).toFixed(1) + '% of the total round-trip time.'
         : '';

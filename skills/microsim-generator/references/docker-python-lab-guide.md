@@ -4,14 +4,15 @@
 
 ## What This Guide Does
 
-Generates interactive Python lab blocks for MkDocs pages in the `learning-python`
-textbook (or any MkDocs project following the same pattern).  Each lab shows a
-code editor, Run and Reset buttons, and an output area.  Code runs inside a fresh,
-isolated Docker container via a local HTTP service on port 5001.
+Generates the client-only browser interface for interactive Python lab blocks in
+MkDocs pages. Each lab shows a code editor, Run and Reset buttons, and an output
+area. A separately reviewed local service must run the code in a fresh Docker
+container; this skill does not provide that execution service.
 
-This is the Docker counterpart to the Skulpt lab pattern — same look and feel,
-but students run real Python (not browser-emulated Python) with access to the full
-standard library and third-party packages.
+This is the Docker counterpart to the Skulpt lab pattern: students run real
+Python rather than browser-emulated Python. The default image provides the Python
+standard library only. Extra packages are available only when the target project
+explicitly builds and reviews an image that installs them.
 
 Use it whenever someone asks to add a Python lab, code runner, interactive Python
 exercise, or runnable code block to a textbook page that uses Docker (not Skulpt).
@@ -21,10 +22,59 @@ Always follow this guide instead of writing docker lab HTML by hand.
 
 ## Prerequisites: Shared Infrastructure
 
-Before generating any lab block, make sure the shared files exist.  Check once
-per session; skip if already in place.
+Before generating any lab block, verify the execution boundary first. Check once
+per session; skip file installation only after the service passes this gate.
 
-### 1. Check / create `docs/css/docker-lab.css`
+### 1. Verify a reviewed execution service exists
+
+The browser assets in this skill send learner-authored Python to
+`http://127.0.0.1:5001/run`. They do not implement that endpoint. The target
+project must provide `scripts/run-python-docker.sh` and the server it launches.
+
+**STOP: do not generate or install a Docker Python lab** when the script or its
+server implementation is missing. Do not copy the client assets, modify
+`mkdocs.yml`, or add lab markup that would look complete but cannot run.
+
+Before proceeding, inspect the implementation and verify all of these controls:
+
+- The HTTP server binds to `127.0.0.1 only`, not `0.0.0.0`, by default.
+- CORS and server-side origin checks use an explicit allowlist of browser
+  origins; wildcard, missing, and `null` origins are rejected. `POST /run`
+  accepts only `Content-Type: application/json` after a successful preflight.
+- Every run uses a fresh container with `--rm`, `--network none`, `--read-only`,
+  `--cap-drop=ALL`, `--security-opt no-new-privileges`, and a non-root user.
+- The command rejects `--privileged`, device access, host PID/IPC/user namespace
+  sharing, added Linux capabilities, and unconfined seccomp or AppArmor. Keep
+  Docker's default seccomp and host LSM policy or use a stricter reviewed policy.
+- The image is pinned by digest. Docker arguments are a fixed argv array; learner
+  code is passed over standard input and is never interpolated into a host shell
+  command, Docker argument, filename, or environment variable.
+- Before generation, the project records reviewed numeric ceilings for
+  `--memory`, `--cpus`, `--pids-limit`, request bytes, streamed output bytes,
+  execution time, queued requests, and concurrent containers. A full queue fails
+  fast rather than growing without bound.
+- The container receives no host filesystem mounts, Docker socket, or inherited
+  secrets, and only a size-limited temporary filesystem when one is required.
+- The server enforces request limits before Docker starts and enforces output
+  limits while streaming. On timeout, output cap, client disconnect, server
+  shutdown, or internal error, it forcibly stops and removes the container before
+  releasing the request slot; `--rm` alone is not a cleanup strategy.
+- The server accepts `POST /run` JSON containing only `code` and optional
+  `show_timing`, rejecting unknown fields. It returns bounded JSON with `stdout`,
+  `stderr`, and `returncode`. When timing is requested, it reports directly
+  measured `docker_total_ms`, `server_overhead_ms`, `container_startup_ms`, and
+  `python_exec_ms`. `server_overhead_ms` excludes `docker_total_ms`;
+  `docker_total_ms` includes startup, execution, and any other container overhead.
+- An acceptance check proves disallowed origins fail, outbound network access
+  fails, filesystem changes do not persist, runaway code times out, oversized
+  input/output is rejected or truncated while streaming, overload fails fast,
+  forbidden Docker options cannot be introduced, and the container is removed
+  after every success, timeout, disconnect, output cap, and server shutdown.
+
+This checklist is a review boundary, not a server implementation. A public or
+remote execution service needs a separate threat model and is outside this guide.
+
+### 2. Check / create `docs/css/docker-lab.css`
 
 If the file is missing, copy from this skill's assets:
 
@@ -33,14 +83,14 @@ cp ~/.claude/skills/microsim-generator/assets/docker-python-lab/docker-lab.css \
    docs/css/docker-lab.css
 ```
 
-### 2. Check / create `docs/js/docker-lab.js`
+### 3. Check / create `docs/js/docker-lab.js`
 
 ```bash
 cp ~/.claude/skills/microsim-generator/assets/docker-python-lab/docker-lab.js \
    docs/js/docker-lab.js
 ```
 
-### 3. Add to `mkdocs.yml` (if not already present)
+### 4. Add to `mkdocs.yml` (if not already present)
 
 Check `extra_css` and `extra_javascript` in `mkdocs.yml`.  If the entries are
 missing, add them:
@@ -54,11 +104,6 @@ extra_javascript:
 ```
 
 Do **not** duplicate entries that are already there.
-
-### 4. Verify the service script exists
-
-The runtime service lives at `scripts/run-python-docker.sh`.  If it is missing
-from the project, tell the user — the labs won't work without it.
 
 ---
 
@@ -97,11 +142,13 @@ elements.
 - Do **not** add `id="main"` to any element — that conflicts with the p5.js canvas
   parent convention used elsewhere in this project.
 
-### Timed lab (shows phase-by-phase timing breakdown)
+### Timed lab (shows measured timing breakdown)
 
 Only add this variant when the lesson is specifically about how Docker execution
-works.  It requires suffix `"4"` by convention and adds a timing table below the
-buttons.
+works and the reviewed service returns documented timing fields. It requires
+suffix `"4"` by convention. The browser measures total round-trip time. It may
+derive only the combined browser and network overhead; it cannot infer separate
+outbound and return network times.
 
 ```html
 <div id="docker-lab-4">
@@ -119,18 +166,21 @@ buttons.
       <tr><th>#</th><th>Phase</th><th style="text-align:right">Time (ms)</th><th>Bar</th></tr>
     </thead>
     <tbody>
-      <tr><td>1</td><td>Send to service (network)</td>
-          <td id="td-network-send" style="text-align:right">—</td>
-          <td><div class="timing-bar" id="bar-network-send"></div></td></tr>
-      <tr><td>2</td><td>Container startup</td>
+      <tr><td>1</td><td>Browser and network overhead (combined)</td>
+          <td id="td-roundtrip-overhead" style="text-align:right">—</td>
+          <td><div class="timing-bar" id="bar-roundtrip-overhead"></div></td></tr>
+      <tr><td>2</td><td>Server overhead</td>
+          <td id="td-server-overhead" style="text-align:right">—</td>
+          <td><div class="timing-bar" id="bar-server-overhead"></div></td></tr>
+      <tr><td>3</td><td>Container startup</td>
           <td id="td-startup" style="text-align:right">—</td>
           <td><div class="timing-bar" id="bar-startup"></div></td></tr>
-      <tr><td>3</td><td>Python execution</td>
+      <tr><td>4</td><td>Python execution</td>
           <td id="td-exec" style="text-align:right">—</td>
           <td><div class="timing-bar" id="bar-exec"></div></td></tr>
-      <tr><td>4</td><td>Return to browser (network)</td>
-          <td id="td-network-return" style="text-align:right">—</td>
-          <td><div class="timing-bar" id="bar-network-return"></div></td></tr>
+      <tr><td>5</td><td>Other container overhead</td>
+          <td id="td-container-overhead" style="text-align:right">—</td>
+          <td><div class="timing-bar" id="bar-container-overhead"></div></td></tr>
       <tr style="font-weight:bold; border-top: 2px solid #642580;">
           <td colspan="2">Total round-trip</td>
           <td id="td-total" style="text-align:right">—</td>
@@ -200,8 +250,9 @@ print("The answer is", x)
 - **Every lab should produce visible output** — at least one `print()` call.
 - **Avoid `input()`** — there is no stdin in the Docker runner.
 - **Avoid file I/O** — the container has no persistent filesystem.
-- **Avoid `import` of non-stdlib packages** unless `python:3.11-alpine` includes
-  them (it ships only the stdlib).
+- **Avoid `import` of non-stdlib packages** unless the reviewed target image
+  explicitly installs them. `python:3.11-alpine` supplies the stdlib, not an
+  open-ended package environment.
 - Match the "See It — Run It — Modify It" rhythm from the Skulpt labs:
   starter code runs and shows something, then "Try these experiments" gives
   specific, achievable modifications.
@@ -226,6 +277,7 @@ this automatically.
 
 When generating labs for a single page:
 
+- [ ] The reviewed execution service and every sandbox control above are present
 - [ ] Each lab has a **unique suffix** — `1`, `2`, `3`, …
 - [ ] Every element ID includes that suffix (`docker-lab-1`, `docker-code-1`, etc.)
 - [ ] Button `onclick` passes the matching suffix string: `runDocker('2')`
