@@ -39,6 +39,26 @@ REQUIRED_METADATA_FIELDS = [
     "title", "description", "creator", "date", "subject",
 ]
 
+MICROSIM_IDENTITY_FILES = ("main.html", "index.md", "metadata.json")
+
+
+def discover_sim_dirs(sims_dir):
+    """Return batch-validation candidates with a MicroSim identity artifact.
+
+    A candidate need not be complete: the validator must still report a
+    missing main.html, index.md, or metadata.json. Directories containing only
+    shared runtime assets are support infrastructure, not learner-facing sims.
+    """
+    return sorted([
+        name for name in os.listdir(sims_dir)
+        if os.path.isdir(os.path.join(sims_dir, name))
+        and not name.startswith(".")
+        and any(
+            os.path.isfile(os.path.join(sims_dir, name, identity_file))
+            for identity_file in MICROSIM_IDENTITY_FILES
+        )
+    ])
+
 
 def _check_main_html(sim_dir):
     """Check main.html: exists (5), has schema meta tag (3), has <main> tag (2)."""
@@ -366,11 +386,7 @@ def main():
     if args.sim:
         sim_dirs = [args.sim]
     else:
-        sim_dirs = sorted([
-            d for d in os.listdir(sims_dir)
-            if os.path.isdir(os.path.join(sims_dir, d))
-            and not d.startswith(".")
-        ])
+        sim_dirs = discover_sim_dirs(sims_dir)
 
     results = []
     for name in sim_dirs:
