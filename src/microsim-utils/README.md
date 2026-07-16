@@ -173,6 +173,13 @@ full convention and how the height is communicated to downstream agents.
 
 Score MicroSims against a 100-point quality rubric.
 
+In batch mode, the validator treats a directory as a MicroSim candidate when
+it contains at least one identity-bearing artifact: `main.html`, `index.md`, or
+`metadata.json`. This keeps incomplete simulations visible to the missing-file
+checks while excluding support-only directories such as a shared CSS/JavaScript
+runtime. Passing `--sim NAME` explicitly validates that directory regardless of
+its contents.
+
 ```bash
 # Validate single sim
 python3 validate-sims.py --project-dir /path/to/project --sim angle-builder --verbose
