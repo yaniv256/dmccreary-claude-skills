@@ -4,15 +4,23 @@ on:
   pull_request:
     paths:
       - "skills/microsim-utils/**"
+      - "skills/book-installer/**"
       - "src/diagram-reports/**"
       - "scripts/bk-diagram-reports"
+      - "commands/ibook.md"
+      - "skills/archived/README.md"
+      - "docs/skill-descriptions/book/diagram-reports-generator.md"
       - ".github/workflows/microsim-utils-contract.yml"
   push:
     branches: [main]
     paths:
       - "skills/microsim-utils/**"
+      - "skills/book-installer/**"
       - "src/diagram-reports/**"
       - "scripts/bk-diagram-reports"
+      - "commands/ibook.md"
+      - "skills/archived/README.md"
+      - "docs/skill-descriptions/book/diagram-reports-generator.md"
       - ".github/workflows/microsim-utils-contract.yml"
 
 permissions:

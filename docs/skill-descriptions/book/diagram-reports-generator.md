@@ -21,9 +21,9 @@ This skill produces two report files:
 For each diagram or MicroSim, the reports include:
 
 - **Status**: Planned, In Progress, Complete
-- **Difficulty Level**: Basic, Intermediate, Advanced
+- **Planning Heuristic**: keyword-derived Easy, Medium, Hard, or Very Hard; not a quality score or measured estimate
 - **Bloom's Taxonomy Level**: Remember through Create
-- **UI Complexity**: Simple to Complex
+- **UI Keyword Mentions**: text occurrences in the source specification, not implemented controls
 - **Implementation Type**: Static diagram, Interactive MicroSim
 
 ## When to Use

@@ -65,8 +65,8 @@ class VisualElement:
             'Status': self.status,
             'Type': self.element_type.title(),
             'Bloom Levels': ', '.join(self.bloom_levels),
-            'UI Elements': self.ui_elements_count,
-            'Difficulty': self.estimated_difficulty,
+            'UI Keyword Mentions': self.ui_elements_count,
+            'Planning Heuristic': self.estimated_difficulty,
             'Learning Objective': self.learning_objective[:100] + '...' if len(self.learning_objective) > 100 else self.learning_objective,
             'MicroSim Recommendations': '; '.join(
                 f"{name} ({score})" for name, score in self.microsim_recommendations
@@ -79,6 +79,7 @@ class DiagramAnalyzer:
 
     # Patterns to match - made more flexible
     # Match #### Diagram: Title followed by <details> block (with optional content in between)
+    HEADER_PATTERN = re.compile(r'^####\s+Diagram:\s*[^\n]+', re.MULTILINE)
     HEADER_DETAILS_PATTERN = re.compile(r'####\s+Diagram:\s*([^\n]+)\n(.*?)<details[^>]*>(.*?)</details>', re.DOTALL)
     DETAILS_PATTERN = re.compile(r'<details[^>]*>(.*?)</details>', re.DOTALL)
     SUMMARY_PATTERN = re.compile(r'<summary>(.*?)</summary>', re.DOTALL)
@@ -142,11 +143,22 @@ class DiagramAnalyzer:
                 chapter_name = chapter_slug
 
             # Find all header + <details> blocks first (preferred method)
+            header_count = len(self.HEADER_PATTERN.findall(content))
             header_details_blocks = list(self.HEADER_DETAILS_PATTERN.finditer(content))
 
             if self.verbose:
                 print(f"\n  Analyzing {relative_source}:")
-                print(f"    Found {len(header_details_blocks)} header+details blocks")
+                print(
+                    f"    Found {header_count} Diagram headers and "
+                    f"{len(header_details_blocks)} complete header+details blocks"
+                )
+
+            if len(header_details_blocks) != header_count:
+                self.errors.append(
+                    f"{relative_source}: found {header_count} Diagram headers but "
+                    f"only {len(header_details_blocks)} complete <details> specifications"
+                )
+                return
 
             elements_found = 0
             for match in header_details_blocks:
@@ -384,13 +396,13 @@ class ReportGenerator:
             "  - toc",
             "---",
             "",
-            "# Diagram and MicroSim Table",
+            "# Diagram and MicroSim Specification Table",
             "",
-            f"**Total Visual Elements:** {len(self.elements)}",
-            f"**Diagrams:** {sum(1 for e in self.elements if e.element_type == 'diagram')}",
-            f"**MicroSims:** {sum(1 for e in self.elements if e.element_type == 'microsim')}",
+            f"**Total Specification Blocks:** {len(self.elements)}",
+            f"**Diagram Specifications:** {sum(1 for e in self.elements if e.element_type == 'diagram')}",
+            f"**MicroSim Specifications:** {sum(1 for e in self.elements if e.element_type == 'microsim')}",
             "",
-            "## Summary by Difficulty",
+            "## Summary by Planning Heuristic",
             "",
         ]
 
@@ -405,7 +417,7 @@ class ReportGenerator:
 
         lines.extend([
             "",
-            "## All Visual Elements",
+            "## All Specification Blocks",
             "",
             "| Chapter | Element Title | Status | Type | Bloom Levels | UI Mentions | Planning Heuristic | Recommended MicroSims |",
             "|---------|---------------|--------|------|--------------|-------------|--------------------|-----------------------|"
@@ -429,11 +441,11 @@ class ReportGenerator:
     def generate_markdown_details(self) -> str:
         """Generate Markdown details report organized by chapter"""
         lines = [
-            "# Diagram and MicroSim Details",
+            "# Diagram and MicroSim Specification Details",
             "",
-            f"**Total Visual Elements:** {len(self.elements)}",
-            f"**Diagrams:** {sum(1 for e in self.elements if e.element_type == 'diagram')}",
-            f"**MicroSims:** {sum(1 for e in self.elements if e.element_type == 'microsim')}",
+            f"**Total Specification Blocks:** {len(self.elements)}",
+            f"**Diagram Specifications:** {sum(1 for e in self.elements if e.element_type == 'diagram')}",
+            f"**MicroSim Specifications:** {sum(1 for e in self.elements if e.element_type == 'microsim')}",
             ""
         ]
 
@@ -477,7 +489,7 @@ class ReportGenerator:
         """Generate CSV format report"""
         with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
             fieldnames = ['Chapter', 'Chapter Name', 'Element Title', 'Status', 'Type',
-                         'Bloom Levels', 'UI Elements', 'Difficulty', 'Learning Objective',
+                         'Bloom Levels', 'UI Keyword Mentions', 'Planning Heuristic', 'Learning Objective',
                          'MicroSim Recommendations']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
@@ -493,7 +505,7 @@ class ReportGenerator:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Diagram and MicroSim Report</title>
+    <title>Diagram and MicroSim Specification Report</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -570,7 +582,7 @@ class ReportGenerator:
     </style>
 </head>
 <body>
-    <h1>🎨 Diagram and MicroSim Report</h1>
+    <h1>Diagram and MicroSim Specification Report</h1>
 
     <div class="summary">
         <h2>Overview</h2>
@@ -588,7 +600,7 @@ class ReportGenerator:
 
         html += f"""
             <div class="stat-card">
-                <h3>Total Elements</h3>
+                <h3>Total Specification Blocks</h3>
                 <div class="number">{total}</div>
             </div>
             <div class="stat-card">
@@ -618,7 +630,7 @@ class ReportGenerator:
         </div>
     </div>
 
-    <h2>All Visual Elements</h2>
+    <h2>All Specification Blocks</h2>
     <table id="elementsTable">
         <thead>
             <tr>
@@ -759,7 +771,7 @@ def main():
         print(f"Error: {len(analyzer.errors)} chapter file(s) could not be analyzed.")
         return 1
 
-    print(f"Found {len(analyzer.elements)} visual elements")
+    print(f"Found {len(analyzer.elements)} diagram specification blocks")
 
     if not analyzer.elements and not args.allow_empty:
         print(
@@ -802,11 +814,11 @@ def main():
 
     # Print summary to console
     print("\n=== SUMMARY ===")
-    print(f"Total visual elements: {len(analyzer.elements)}")
-    print(f"Diagrams: {sum(1 for e in analyzer.elements if e.element_type == 'diagram')}")
-    print(f"MicroSims: {sum(1 for e in analyzer.elements if e.element_type == 'microsim')}")
+    print(f"Total specification blocks: {len(analyzer.elements)}")
+    print(f"Diagram specifications: {sum(1 for e in analyzer.elements if e.element_type == 'diagram')}")
+    print(f"MicroSim specifications: {sum(1 for e in analyzer.elements if e.element_type == 'microsim')}")
 
-    print("\nBy Difficulty:")
+    print("\nBy Planning Heuristic:")
     difficulty_counts = {}
     for element in analyzer.elements:
         difficulty_counts[element.estimated_difficulty] = difficulty_counts.get(element.estimated_difficulty, 0) + 1

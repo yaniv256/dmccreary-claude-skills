@@ -1,5 +1,6 @@
 import csv
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
@@ -91,6 +92,37 @@ class DiagramReportTests(unittest.TestCase):
 
             self.assertEqual(row["Status"], "Planned")
             self.assertEqual(row["MicroSim Recommendations"], "forms-generator (88)")
+            self.assertEqual(row["UI Keyword Mentions"], "4")
+            self.assertIn(row["Planning Heuristic"], {"Easy", "Medium", "Hard", "Very Hard"})
+
+    def test_one_malformed_spec_blocks_the_entire_report(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            chapters = root / "chapters"
+            chapters.mkdir()
+            (chapters / "01-valid.md").write_text(SPEC, encoding="utf-8")
+            (chapters / "02-malformed.md").write_text(
+                "# Chapter\n\n#### Diagram: Missing details\n\nNo specification.\n",
+                encoding="utf-8",
+            )
+            output = root / "out"
+
+            result = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPT),
+                    "--chapters-dir",
+                    str(chapters),
+                    "--output-dir",
+                    str(output),
+                ],
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("chapter file(s) could not be analyzed", result.stdout)
+            self.assertFalse((output / "diagram-table.md").exists())
 
     def test_empty_schema_fails_closed_unless_explicitly_allowed(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -129,6 +161,8 @@ class DiagramReportTests(unittest.TestCase):
 
             self.assertIn("Decision &lt;Boundary&gt;", rendered)
             self.assertNotIn("<td>Decision <Boundary></td>", rendered)
+            self.assertIn("All Specification Blocks", rendered)
+            self.assertNotIn("All Visual Elements", rendered)
 
     def test_legacy_command_delegates_to_the_canonical_script(self):
         result = subprocess.run(
@@ -139,6 +173,18 @@ class DiagramReportTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertIn("--allow-empty", result.stdout)
+
+        environment = os.environ.copy()
+        environment["BK_HOME"] = str(ROOT)
+        wrapper = subprocess.run(
+            ["bash", str(ROOT / "scripts/bk-diagram-reports"), "--help"],
+            cwd=ROOT,
+            env=environment,
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(wrapper.returncode, 0)
+        self.assertIn("--allow-empty", wrapper.stdout)
 
     def test_published_guides_preserve_the_evidence_boundary(self):
         route = (ROOT / "skills/microsim-utils/SKILL.md").read_text(encoding="utf-8")
@@ -153,9 +199,18 @@ class DiagramReportTests(unittest.TestCase):
         self.assertIn("Do not use it as a publication-quality gate", guide)
         self.assertIn("Do not copy it into the textbook", guide)
         self.assertIn("Run this optional step only", installer)
+        self.assertIn("run `bk-diagram-reports` only when", (
+            ROOT / "skills/book-installer/SKILL.md"
+        ).read_text(encoding="utf-8"))
         self.assertNotIn(
             "This script audits all MicroSims and diagrams in the project", installer
         )
+        self.assertNotIn("Diagram Reports: diagram-reports.md", installer)
+
+        ibook = (ROOT / "commands/ibook.md").read_text(encoding="utf-8")
+        aliases = (ROOT / "skills/archived/README.md").read_text(encoding="utf-8")
+        self.assertNotIn("Confirms visualization coverage", ibook)
+        self.assertNotIn("visualization coverage, audit diagrams/microsims", aliases)
 
 
 if __name__ == "__main__":

@@ -689,7 +689,7 @@ Each guide contains:
 ### Example 17: Generate All Supplementary Content
 **User:** "generate all supplementary content" or "complete the book" or "39"
 **Routing:** Keywords "supplementary content", "complete the book", "39" → `references/supplementary-content-generator.md`
-**Action:** Read supplementary-content-generator.md. First inventory existing files. Then execute Steps 2–12 in order: generate about page, landing page, README, glossary, FAQ, per-chapter quizzes and references, run `bk-generate-book-metrics` and `bk-diagram-reports`, update mkdocs.yml nav, and run the verification bash check. Report which files were created, skipped, or missing.
+**Action:** Read supplementary-content-generator.md. First inventory existing files. Then execute Steps 2–12 in order: generate about page, landing page, README, glossary, FAQ, per-chapter quizzes and references, run `bk-generate-book-metrics`, run `bk-diagram-reports` only when the documented legacy specification schema is present, update mkdocs.yml nav, and run the verification bash check. Report which files were created, skipped, or missing.
 
 ### Example 16: Install Slide Viewer and Generate Chapter Slides
 **User:** "install the slide viewer and make slides for chapters 1 and 2" or "generate slides for chapter 3"

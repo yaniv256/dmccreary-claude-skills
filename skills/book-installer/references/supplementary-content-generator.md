@@ -264,7 +264,7 @@ If the script is not found in PATH, remind the user to install it similarly to S
 
 **Target:** `README.md` (project root)
 
-The README is generated after the metrics scripts so it can incorporate accurate counts: number of chapters, MicroSims, glossary terms, FAQ entries, and any summary statistics produced by `bk-generate-book-metrics` and `bk-diagram-reports`.
+The README is generated after the metrics script so it can incorporate accurate counts: number of chapters, implemented MicroSims, glossary terms, and FAQ entries. Do not use `bk-diagram-reports` planning heuristics as implementation or publication metrics.
 
 Invoke the `book-publisher` skill's readme route to create a GitHub-facing README. This is separate from the MkDocs site and is what visitors see on the GitHub repository page.
 
@@ -316,7 +316,9 @@ nav:
   - FAQ: faq.md
   - About: about.md
   - Book Metrics: book-metrics.md
-  - Diagram Reports: diagram-reports.md
+  # Add the two learning-graph diagram-specification reports only when Step 9 ran.
+  - Diagram Specifications: learning-graph/diagram-table.md
+  - Diagram Specification Details: learning-graph/diagram-details.md
 ```
 
 Check that no nav entries point to files that don't exist, and no generated files are missing from the nav.
