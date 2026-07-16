@@ -1,0 +1,344 @@
+#!/usr/bin/env python3
+"""Create the canonical intelligent-textbook scaffold without overwrites."""
+
+from __future__ import annotations
+
+import argparse
+import datetime as dt
+import os
+import re
+import shutil
+import sys
+import tempfile
+from dataclasses import dataclass
+from pathlib import Path
+from urllib.parse import urlparse
+
+
+TEMPLATE_ROOT = Path(__file__).parents[1] / "assets" / "init-textbook"
+TOKEN_PATTERN = re.compile(r"\{\{([A-Z_]+)\}\}")
+GITHUB_USERNAME_PATTERN = re.compile(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?")
+REPO_NAME_PATTERN = re.compile(r"[A-Za-z0-9._-]+")
+TEXT_FILENAMES = {".gitignore"}
+TEXT_SUFFIXES = {".css", ".md", ".py", ".yml", ".yaml"}
+EMPTY_DIRECTORIES = (Path("docs/js"),)
+REQUIRED_TEMPLATES = {
+    Path(".gitignore"),
+    Path("mkdocs.yml"),
+    Path("project.code-workspace"),
+    Path("plugins/social_override.py"),
+    Path("docs/index.md"),
+    Path("docs/img/cover.png"),
+    Path("docs/img/license.png"),
+}
+
+
+class ScaffoldError(ValueError):
+    """Raised before the scaffold write boundary when input is unsafe."""
+
+
+@dataclass(frozen=True)
+class ScaffoldConfig:
+    project_dir: Path
+    site_name: str
+    site_description: str
+    site_author: str
+    github_username: str
+    repo_name: str
+    linkedin_url: str
+    primary_color: str
+    accent_color: str
+    year: str
+
+    @property
+    def values(self) -> dict[str, str]:
+        return {
+            "SITE_NAME": self.site_name,
+            "SITE_DESCRIPTION": self.site_description,
+            "SITE_AUTHOR": self.site_author,
+            "GITHUB_USERNAME": self.github_username,
+            "REPO_NAME": self.repo_name,
+            "LINKEDIN_URL": self.linkedin_url,
+            "PRIMARY_COLOR": self.primary_color,
+            "ACCENT_COLOR": self.accent_color,
+            "YEAR": self.year,
+        }
+
+
+def one_line(name: str, value: str) -> str:
+    value = value.strip()
+    if not value:
+        raise ScaffoldError(f"{name} must not be empty")
+    if any(character in value for character in ("\n", "\r", "\x00")):
+        raise ScaffoldError(f"{name} must be a single line")
+    return value
+
+
+def validate_url(name: str, value: str) -> str:
+    value = one_line(name, value)
+    parsed = urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ScaffoldError(f"{name} must be an absolute http(s) URL")
+    return value
+
+
+def build_config(args: argparse.Namespace) -> ScaffoldConfig:
+    requested_project_dir = args.project_dir.expanduser()
+    if requested_project_dir.is_symlink():
+        raise ScaffoldError("project-dir must not be a symbolic link")
+    project_dir = requested_project_dir.resolve()
+    if not project_dir.exists() or not project_dir.is_dir():
+        raise ScaffoldError("project-dir must be an existing directory")
+
+    github_username = one_line("github-username", args.github_username)
+    if not GITHUB_USERNAME_PATTERN.fullmatch(github_username):
+        raise ScaffoldError("github-username is not a valid GitHub account name")
+
+    repo_name = one_line("repo-name", args.repo_name or project_dir.name)
+    if repo_name in {".", ".."} or not REPO_NAME_PATTERN.fullmatch(repo_name):
+        raise ScaffoldError(
+            "repo-name must be more than dots and may contain only letters, "
+            "numbers, '.', '_', and '-'"
+        )
+
+    year = one_line("year", args.year)
+    if not re.fullmatch(r"\d{4}", year):
+        raise ScaffoldError("year must contain exactly four digits")
+
+    return ScaffoldConfig(
+        project_dir=project_dir,
+        site_name=one_line("site-name", args.site_name),
+        site_description=one_line("site-description", args.site_description),
+        site_author=one_line("site-author", args.site_author),
+        github_username=github_username,
+        repo_name=repo_name,
+        linkedin_url=validate_url("linkedin-url", args.linkedin_url),
+        primary_color=one_line("primary-color", args.primary_color),
+        accent_color=one_line("accent-color", args.accent_color),
+        year=year,
+    )
+
+
+def destination_relative_path(source: Path, config: ScaffoldConfig) -> Path:
+    relative = source.relative_to(TEMPLATE_ROOT)
+    if relative == Path("project.code-workspace"):
+        return Path(f"{config.repo_name}.code-workspace")
+    return relative
+
+
+def template_files() -> list[Path]:
+    if not TEMPLATE_ROOT.is_dir():
+        raise ScaffoldError(f"template root is missing: {TEMPLATE_ROOT}")
+    files = sorted(path for path in TEMPLATE_ROOT.rglob("*") if path.is_file())
+    present = {path.relative_to(TEMPLATE_ROOT) for path in files}
+    missing = sorted(REQUIRED_TEMPLATES - present)
+    if missing:
+        raise ScaffoldError(
+            "canonical template is incomplete: " + ", ".join(map(str, missing))
+        )
+    return files
+
+
+def is_text_template(path: Path) -> bool:
+    return path.name in TEXT_FILENAMES or path.suffix in TEXT_SUFFIXES
+
+
+def render_yaml_scalars(text: str, values: dict[str, str]) -> str:
+    # Escape substitutions anywhere inside a single-quoted YAML scalar. This
+    # covers both scalar-only tokens and interpolated values such as copyright.
+    rendered_lines: list[str] = []
+    for line in text.splitlines(keepends=True):
+        match = re.match(r"^(\s*[^#\n][^:\n]*:\s*)'(.*)'(\s*(?:#.*)?)(\r?\n)?$", line)
+        if match:
+            prefix, scalar, suffix, newline = match.groups()
+            for key, value in values.items():
+                scalar = scalar.replace(f"{{{{{key}}}}}", value.replace("'", "''"))
+            line = f"{prefix}'{scalar}'{suffix}{newline or ''}"
+        rendered_lines.append(line)
+    return "".join(rendered_lines)
+
+
+def render_text(
+    text: str,
+    values: dict[str, str],
+    *,
+    yaml: bool = False,
+    markdown_frontmatter: bool = False,
+) -> str:
+    if yaml:
+        text = render_yaml_scalars(text, values)
+    elif markdown_frontmatter and text.startswith("---"):
+        match = re.match(r"\A(---\r?\n)(.*?)(\r?\n---(?:\r?\n|\Z))", text, re.DOTALL)
+        if match:
+            text = (
+                match.group(1)
+                + render_yaml_scalars(match.group(2), values)
+                + match.group(3)
+                + text[match.end() :]
+            )
+
+    # The same tokens can also appear as ordinary Markdown or Python text.
+    for key, value in values.items():
+        text = text.replace(f"{{{{{key}}}}}", value)
+    return text
+
+
+def planned_destinations(config: ScaffoldConfig) -> list[Path]:
+    files = [
+        config.project_dir / destination_relative_path(source, config)
+        for source in template_files()
+    ]
+    directories = [config.project_dir / relative for relative in EMPTY_DIRECTORIES]
+    return files + directories
+
+
+def preflight(config: ScaffoldConfig) -> list[Path]:
+    destinations = planned_destinations(config)
+    collisions = [path for path in destinations if path.exists() or path.is_symlink()]
+
+    unsafe_parents: set[Path] = set()
+    for destination in destinations:
+        parent = destination.parent
+        while parent != config.project_dir:
+            if parent.is_symlink() or (parent.exists() and not parent.is_dir()):
+                unsafe_parents.add(parent)
+            parent = parent.parent
+
+    if collisions or unsafe_parents:
+        paths = sorted({*collisions, *unsafe_parents})
+        rendered = "\n".join(f"  - {path}" for path in paths)
+        raise ScaffoldError(f"refusing to overwrite or traverse existing output paths:\n{rendered}")
+    return destinations
+
+
+def render_stage(config: ScaffoldConfig, stage: Path) -> list[Path]:
+    rendered_paths: list[Path] = []
+    for source in template_files():
+        relative = destination_relative_path(source, config)
+        destination = stage / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if is_text_template(source):
+            rendered = render_text(
+                source.read_text(encoding="utf-8"),
+                config.values,
+                yaml=source.suffix in {".yml", ".yaml"},
+                markdown_frontmatter=source.suffix == ".md",
+            )
+            unresolved = sorted(set(TOKEN_PATTERN.findall(rendered)))
+            if unresolved:
+                raise ScaffoldError(
+                    f"unresolved placeholders in {relative}: {', '.join(unresolved)}"
+                )
+            destination.write_text(rendered, encoding="utf-8")
+        else:
+            shutil.copyfile(source, destination)
+        rendered_paths.append(relative)
+    for relative in EMPTY_DIRECTORIES:
+        (stage / relative).mkdir(parents=True, exist_ok=False)
+    return rendered_paths
+
+
+def commit_stage(config: ScaffoldConfig, stage: Path, relative_paths: list[Path]) -> None:
+    written: list[Path] = []
+    created_directories: list[Path] = []
+
+    def ensure_parent(directory: Path) -> None:
+        missing: list[Path] = []
+        candidate = directory
+        while candidate != config.project_dir and not candidate.exists():
+            missing.append(candidate)
+            candidate = candidate.parent
+        if candidate.is_symlink() or not candidate.is_dir():
+            raise ScaffoldError(f"unsafe output parent appeared during write: {candidate}")
+        for path in reversed(missing):
+            path.mkdir()
+            created_directories.append(path)
+
+    try:
+        for relative in relative_paths:
+            source = stage / relative
+            destination = config.project_dir / relative
+            ensure_parent(destination.parent)
+            # Hard-linking is atomic, stays on the staging filesystem, and
+            # fails instead of replacing a destination created after preflight.
+            os.link(source, destination)
+            written.append(destination)
+        for relative in EMPTY_DIRECTORIES:
+            destination = config.project_dir / relative
+            ensure_parent(destination.parent)
+            destination.mkdir(parents=True, exist_ok=False)
+            created_directories.append(destination)
+    except Exception:
+        for destination in reversed(written):
+            if destination.exists():
+                destination.unlink()
+        for destination in reversed(created_directories):
+            try:
+                destination.rmdir()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                # Preserve any path populated concurrently by another actor.
+                pass
+        raise
+
+
+def scaffold(config: ScaffoldConfig, dry_run: bool = False) -> list[Path]:
+    destinations = preflight(config)
+    with tempfile.TemporaryDirectory(
+        prefix=".init-textbook-", dir=config.project_dir.parent
+    ) as directory:
+        stage = Path(directory)
+        relative_paths = render_stage(config, stage)
+        if dry_run:
+            return destinations
+        # Repeat immediately before the write boundary to catch a race with a
+        # cooperating process that created a destination after initial preflight.
+        preflight(config)
+        commit_stage(config, stage, relative_paths)
+    return destinations
+
+
+def parser() -> argparse.ArgumentParser:
+    command = argparse.ArgumentParser(
+        description="Create a fail-closed intelligent-textbook scaffold."
+    )
+    command.add_argument("--project-dir", type=Path, required=True)
+    command.add_argument("--site-name", required=True)
+    command.add_argument("--site-description", required=True)
+    command.add_argument("--site-author", required=True)
+    command.add_argument("--github-username", required=True)
+    command.add_argument("--repo-name")
+    command.add_argument(
+        "--linkedin-url",
+        default="https://www.linkedin.com/in/danmccreary/",
+    )
+    command.add_argument("--primary-color", default="indigo")
+    command.add_argument("--accent-color", default="orange")
+    command.add_argument("--year", default=str(dt.date.today().year))
+    command.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Validate inputs and collisions, then print outputs without writing.",
+    )
+    return command
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parser().parse_args(argv)
+    try:
+        config = build_config(args)
+        paths = scaffold(config, dry_run=args.dry_run)
+    except ScaffoldError as error:
+        print(f"init-textbook: {error}", file=sys.stderr)
+        return 2
+
+    verb = "Would create" if args.dry_run else "Created"
+    print(f"{verb} {len(paths)} paths in {config.project_dir}")
+    for path in paths:
+        print(f"  {path.relative_to(config.project_dir)}")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -261,8 +261,12 @@ Each guide contains:
 
 **Templates:** single canonical copy in `assets/init-textbook/`
 
+**Executable boundary:** `scripts/init_textbook.py` previews and creates the
+scaffold. Do not replace it with hand-written copy or substitution commands.
+
 **Prerequisites:**
-- Empty (or nearly empty) project directory — refuses to overwrite mkdocs.yml, docs/index.md, or docs/license.md
+- Existing project directory whose generated destination paths are all absent;
+  the initializer fails before writing if any output would collide
 
 ### google-analytics.md (feature 25)
 
