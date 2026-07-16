@@ -645,7 +645,7 @@ When scoring, consider:
 
 **Guide Location**: `skills/microsim-generator/references/docker-python-lab-guide.md`
 
-**Primary Use Cases:** Runnable Python code blocks embedded in textbook pages — code editor, Run/Reset buttons, output area; code executes in an isolated Docker container via a local service.
+**Primary Use Cases:** Runnable Python code blocks embedded in textbook pages — code editor, Run/Reset buttons, output area; code executes through a separately reviewed local Docker service. The routed guide is client-only and does not ship the execution service, so it must fail closed when that service is absent or does not satisfy the documented sandbox contract.
 
 **Trigger Words/Phrases:** "python lab", "code runner", "runnable code block", "interactive python exercise", "run real Python", "docker lab"
 

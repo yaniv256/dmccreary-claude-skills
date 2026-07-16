@@ -69,6 +69,29 @@ If the scripts are not found at `$UTILS`, check for them in the project's own `s
 | "Create a MicroSim for inscribed angles" | **Single sim** → Step 1B |
 | "Build a timeline of Unix history" | **Single sim** → Step 1B |
 
+### 0.3 Run the Docker Python lab preflight before scaffolding
+
+The Docker Python lab route is different from the other routes: this repository
+ships only its browser client. It does not ship the local service that executes
+learner-authored Python.
+
+Run this gate before Step 1B or Step 2 whenever a single request or any extracted
+batch specification requires a Python lab, code runner, runnable Python, or
+Docker-based Python execution. Requests without learner-authored code execution,
+such as Docker architecture diagrams or container lifecycle visualizations, do
+not trigger this gate.
+
+1. Read `references/docker-python-lab-guide.md` immediately.
+2. Apply its reviewed execution-service prerequisite and sandbox contract.
+3. If the target project lacks the service script, server implementation, or any
+   required control, **stop before running any scaffold command**. Do not create
+   a spec, sim directory, HTML, JavaScript, CSS, metadata, or MkDocs entry.
+4. For a batch, do not run Step 2 until the blocked Docker specs are removed from
+   the scaffold input or every Docker prerequisite passes. Unrelated specs may be
+   scaffolded from a filtered input file after the exclusion is explicit.
+
+This preflight is authoritative over the generic scaffold-first workflow below.
+
 ---
 
 ## Step 1: Extract Specs from Chapter (Batch Route)
@@ -109,13 +132,17 @@ with open('/tmp/sim-status.json') as f:
 "
 ```
 
-After extracting, proceed to **Step 2**.
+After extracting, apply **Step 0.3** to any Docker Python lab specification, then
+proceed to **Step 2** only when the preflight allows it.
 
 ---
 
 ## Step 1B: Single-Sim Shortcut
 
 For a single MicroSim request (not a full chapter batch):
+
+First classify the request. If it is a Docker Python lab, complete **Step 0.3**
+before writing the spec JSON or running the scaffold.
 
 1. **Write a 1-entry spec JSON** manually:
 

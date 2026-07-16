@@ -28,3 +28,7 @@ jobs:
         run: python3 -m unittest discover -s skills/microsim-generator/tests -p 'test_*.py'
       - name: Check concept-classifier browser script syntax
         run: node --check skills/microsim-generator/assets/concept-classifier/concept-classifier-template.js
+      - name: Check Docker Python lab browser script syntax
+        run: node --check skills/microsim-generator/assets/docker-python-lab/docker-lab.js
+      - name: Test Docker Python lab timing contract
+        run: node skills/microsim-generator/tests/test_docker_lab_runtime.js
