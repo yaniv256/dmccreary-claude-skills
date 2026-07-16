@@ -92,6 +92,8 @@ directory, provided it exposed a compatible-looking path.
 ## Resolution evidence
 
 - Fix PR: [#12](https://github.com/yaniv256/dmccreary-claude-skills/pull/12)
+- Merge commit: `5a92cc9b7493c1d13191b7b16b7f209d05406977`
+- Merged at: 2026-07-16T05:26:06Z
 - Focused CLI regressions: 5/5 passed.
 - Repository Python tests: 28/28 passed.
 - Real-book dry run: 14 candidates, 14 missing screenshots, five missing
@@ -99,4 +101,6 @@ directory, provided it exposed a compatible-looking path.
 - Durable learning:
   [CLI Introspection Must Not Cross the Write Boundary](../solutions/logic-errors/cli-introspection-must-not-cross-the-write-boundary.md)
 
-Merge commit and independent default-branch verification remain pending.
+All closure criteria are satisfied. An independent read from `origin/main`
+confirmed the argument parser, dry-run option, project-root validation, and all
+five subprocess regressions at the merge commit.
