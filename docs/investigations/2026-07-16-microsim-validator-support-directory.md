@@ -1,7 +1,7 @@
 ---
 title: MicroSim Validator Treats Support Directories as Simulations
 date: 2026-07-16
-status: investigating
+status: resolved
 severity: high
 component: src/microsim-utils/validate-sims.py
 trello: https://trello.com/c/bQdJl9wF/203-investigation-microsim-validator-treats-shared-runtime-as-a-simulation
@@ -127,3 +127,18 @@ simulations.
 - Same-class search found three sibling discovery paths. `book-status.py` and
   the TODO utility already require `main.html`; the navigation and gallery
   generators require `index.md`. None treats every directory as a MicroSim.
+
+## Resolution evidence
+
+- Fix PR: [#10](https://github.com/yaniv256/dmccreary-claude-skills/pull/10)
+- Merge commit: `3b5dfcd19b4d7d5102703aff556cca33a34d865c`
+- Merged at: 2026-07-16T04:53:26Z
+- Focused discovery tests: 2/2 passed.
+- Repository Python tests: 24/24 passed.
+- Real textbook validation: 14 candidates, with no `shared` result.
+- Durable learning:
+  [Discover Artifacts by Capability, Not Container Shape](../solutions/logic-errors/discover-artifacts-by-capability-not-container-shape.md)
+
+All closure criteria are satisfied. Batch validation excludes support-only
+directories, incomplete simulations remain diagnosable, and explicit
+single-directory validation retains its previous behavior.
