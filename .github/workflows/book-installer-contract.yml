@@ -24,11 +24,12 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
+      - name: Install contract dependencies
+        run: python -m pip install mkdocs-material pyyaml
       - name: Test book installer contracts
         run: python3 -m unittest discover -s skills/book-installer/tests -p 'test_*.py' -v
       - name: Build a representative generated scaffold
         run: |
-          python -m pip install mkdocs-material
           project_dir="$(mktemp -d)"
           python3 skills/book-installer/scripts/init_textbook.py \
             --project-dir "$project_dir" \
