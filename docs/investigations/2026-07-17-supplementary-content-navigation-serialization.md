@@ -2,7 +2,7 @@
 
 ## Status
 
-REMEDIATED LOCALLY - validation passed; merge and default-branch verification pending
+RESOLVED - source remediation and closure evidence verified on `main`
 
 ## Incident
 
@@ -199,3 +199,22 @@ allowing nested skills to exercise that side effect before its own final Step 12
 - Complete discovered Python test set: 98 passed.
 - `git diff --check` and Python compilation: passed.
 - Strict MkDocs build: passed with pre-existing informational diagnostics only.
+
+## Closure evidence
+
+- Source remediation merged through
+  [PR #28](https://github.com/yaniv256/dmccreary-claude-skills/pull/28)
+  as merge commit `493bde38113dd97e98a64de61f31c669cdea523f`.
+- All three PR checks passed: the supplementary-navigation contract, the
+  reference-generator contract with its strict MkDocs build, and the MicroSim
+  utility contract.
+- All three post-merge `main` workflows passed at the merge commit:
+  [supplementary navigation](https://github.com/yaniv256/dmccreary-claude-skills/actions/runs/29609974399),
+  [reference generator](https://github.com/yaniv256/dmccreary-claude-skills/actions/runs/29609974236),
+  and [MicroSim utils](https://github.com/yaniv256/dmccreary-claude-skills/actions/runs/29609974151).
+- A fresh detached worktree at the merge commit passed the five focused and
+  fifteen adjacent contract tests and contained the canonical Step 12 owner.
+- CE Compound found high overlap with
+  [Keep Behavioral Documentation Synchronized with Executable Contracts](../solutions/logic-errors/behavioral-documentation-needs-executable-contracts.md)
+  and extended that owner with the nested-side-effect boundary for batch
+  orchestrators.

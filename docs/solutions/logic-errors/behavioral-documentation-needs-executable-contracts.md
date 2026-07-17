@@ -87,6 +87,22 @@ contract failed against every stale surface before remediation and passes on
 the default branch after [PR #26](https://github.com/yaniv256/dmccreary-claude-skills/pull/26)
 (`skills/chapter-content-generator/tests/test_documentation_contract.py`).
 
+Batch orchestrators need an additional boundary: invoking a standalone skill
+must not automatically grant that skill ownership of a shared side effect. The
+supplementary-content workflow called About, Glossary, FAQ, quiz, reference,
+metrics, and report generators that normally update `mkdocs.yml` themselves.
+The orchestrator also had a final navigation phase, so the same ordered YAML
+list could be rewritten repeatedly from different instruction contexts.
+
+The repaired workflow treats nested generators as producers of navigation
+change requests. Every pre-navigation step returns or records its owned entry,
+and Step 12 is the sole writer: it reads current state, preserves unrelated and
+existing child entries, applies the collected set once, and verifies only files
+that now exist. The focused contract checks each producing step independently,
+the canonical chapter-label shape, and Step 12 ownership
+(`skills/book-installer/tests/test_supplementary_navigation_contract.py`). This
+is enforced after [PR #28](https://github.com/yaniv256/dmccreary-claude-skills/pull/28).
+
 ## Why This Works
 
 The test compares meaning-bearing invariants while still allowing each document
@@ -107,6 +123,12 @@ between independently written entry points.
 - Include direct callers and integrators in that inventory. An invocation can
   publish a competing contract through arguments and follow-up instructions even
   when it names the canonical skill correctly.
+- When a batch orchestrator invokes standalone skills, explicitly suppress each
+  nested skill's shared-file mutation and require it to return an owned change
+  request. Give one final phase sole read/write ownership of the shared file.
+- Test every producing phase independently. A single stale-phrase assertion can
+  miss a newly worded early mutation even when the final phase still looks
+  correct.
 - Define the small set of behavioral dimensions that must agree: version,
   defaults, workflow, safety rules, and artifact ownership.
 - Test semantic sections independently so headings cannot bleed into adjacent
@@ -131,3 +153,5 @@ between independently written entry points.
 - [Reference generator remediation PR #18](https://github.com/yaniv256/dmccreary-claude-skills/pull/18)
 - [Chapter content execution-policy investigation](../../investigations/2026-07-17-chapter-content-generator-execution-contract.md)
 - [Chapter content remediation PR #26](https://github.com/yaniv256/dmccreary-claude-skills/pull/26)
+- [Supplementary navigation serialization investigation](../../investigations/2026-07-17-supplementary-content-navigation-serialization.md)
+- [Supplementary navigation remediation PR #28](https://github.com/yaniv256/dmccreary-claude-skills/pull/28)
