@@ -67,6 +67,46 @@ one executable owner for input validation, collision detection, format-aware
 substitution, and verification. The archived-to-active consolidation preserved
 that weak boundary and then accumulated config-comment and GitHub-link drift.
 
+## Follow-up review findings
+
+An independent review of candidate `393c3ae8` found three remaining ways the
+transaction could violate its own fail-closed contract:
+
+1. The project directory was pinned by descriptor, but the staging directory
+   was passed onward through its mutable name. Renaming that directory and
+   creating a replacement at the old name redirected both rendering and
+   publication to the replacement.
+2. The parent-pinning pass stopped at a missing directory. During commit,
+   `FileExistsError` from `mkdir` was treated as permission to use a directory
+   that had appeared after pinning, so a concurrent creator could supply an
+   unreviewed output parent.
+3. Placeholder replacement iterated over the value map. A value containing a
+   later placeholder was therefore interpreted as template syntax on a second
+   pass instead of remaining data and triggering unresolved-token validation.
+
+These are the same underlying anti-pattern at three boundaries: an object was
+validated, then later reacquired or reinterpreted through a mutable name. The
+fix keeps the staging object open by descriptor, rejects output parents that
+appear after the pinning pass, and substitutes template tokens with one regex
+pass. Python documents `dir_fd` as the interface for operations relative to an
+open directory, and the Linux `openat` rationale explicitly identifies stable
+directory descriptors as the defense against path-prefix races:
+
+- https://docs.python.org/3/library/os.html#os.open
+- https://man7.org/linux/man-pages/man2/open.2.html
+
+Three regressions were added before the fix and failed against `393c3ae8`:
+
+- staging-directory rename plus replacement redirected publication;
+- a missing `docs/` parent created after pinning was accepted;
+- `SITE_NAME={{SITE_AUTHOR}}` silently became the author value.
+
+All three pass on remediation candidate `c7b23a47`. The original fourteen
+initializer tests also pass, as do all book-installer contract tests and the
+repository's other Python contract suites. A representative generated project
+builds under real MkDocs Material strict mode and produces the expected GitHub
+edit URL and explicit social-image metadata.
+
 ## Remediation
 
 1. Add a standard-library initializer with explicit arguments for every
