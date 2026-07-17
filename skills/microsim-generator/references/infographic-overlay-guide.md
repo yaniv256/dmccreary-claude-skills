@@ -234,7 +234,7 @@ Zone position guidelines:
 
 ### Grid Step 5: Generate main.html
 
-Use `assets/infographic-overlay/grid-main-template.html`. Replace `{TITLE}` and `{PROMPT_TEXT}` (the click-to-explore instruction). The image and zones are injected by `grid-diagram.js` — there is no `<img>` tag in the template.
+Use `assets/infographic-overlay/grid-main-template.html`. Replace `{TITLE}` and `{PROMPT_TEXT}` with an input-neutral explore instruction such as "Select any column to learn more." The image and zones are injected by `grid-diagram.js` — there is no `<img>` tag in the template.
 
 Link to `grid-overlay.css` and `grid-diagram.js`:
 
@@ -243,6 +243,12 @@ Link to `grid-overlay.css` and `grid-diagram.js`:
 ...
 <script src="../shared-libs/grid-diagram.js"></script>
 ```
+
+The injected zones are native buttons. Their accessible names come from each
+zone's `label`, their tab order follows the `zones` array, and Enter or Space
+must perform the same Explore or Quiz action as a pointer click. Keep the
+provided focus-visible styles and do not describe the interaction as
+mouse-only.
 
 ### Grid Step 6–8
 

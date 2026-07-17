@@ -51,7 +51,7 @@ Compare to `data-json-schema.md`, which documents the point-marker callout type 
 
 ## Zone Fields
 
-Each object in the `zones` array defines one clickable rectangular region.
+Each object in the `zones` array defines one interactive rectangular region.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
@@ -79,6 +79,19 @@ Each object in the `zones` array defines one clickable rectangular region.
 - All values are percentages of the image dimensions (0–100)
 - Use `?edit=true` appended to the URL to enter edit mode: drag corner handles to calibrate positions visually, then click "Copy JSON" to get updated coordinates
 - For comparison-column posters, zones typically run the full height of the content area (e.g., `y1: 10, y2: 90`) and divide the width evenly
+
+## Accessibility Contract
+
+`grid-diagram.js` renders each normal zone as a native button. The zone `label`
+is its accessible name and the order of `zones` in `data.json` is its keyboard
+tab order. A learner can focus zones with Tab, activate them with Enter or
+Space in both Explore and Quiz modes, and see a high-contrast focus indicator.
+Do not replace these buttons with generic elements or add custom keyboard
+handlers that duplicate native button behavior.
+
+Edit mode removes the zone buttons from sequential keyboard navigation because
+the calibration corner handles, rather than the learning interaction, own that
+mode.
 
 ## Color Palette Suggestions
 

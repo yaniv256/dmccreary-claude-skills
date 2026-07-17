@@ -8,6 +8,15 @@ TEMPLATE = SKILL / "assets" / "infographic-overlay" / "main-template.html"
 GUIDE = SKILL / "references" / "infographic-overlay-guide.md"
 HEIGHT_GUIDE = SKILL / "references" / "overlay-iframe-height-pinning.md"
 RUNTIME = SKILL / "assets" / "infographic-overlay" / "shared-libs" / "diagram.js"
+GRID_RUNTIME = (
+    SKILL / "assets" / "infographic-overlay" / "shared-libs" / "grid-diagram.js"
+)
+GRID_CSS = (
+    SKILL / "assets" / "infographic-overlay" / "shared-libs" / "grid-overlay.css"
+)
+PUBLISHED_GRID_RUNTIME = ROOT / "docs" / "sims" / "shared-libs" / "grid-diagram.js"
+PUBLISHED_GRID_CSS = ROOT / "docs" / "sims" / "shared-libs" / "grid-overlay.css"
+GRID_SCHEMA = SKILL / "references" / "overlay-grid-data-json-schema.md"
 ARCHIVED_HEIGHT_GUIDE = (
     ROOT
     / "skills"
@@ -40,6 +49,13 @@ class InfographicOverlayContractTests(unittest.TestCase):
         self.guide = GUIDE.read_text(encoding="utf-8")
         self.height_guide = HEIGHT_GUIDE.read_text(encoding="utf-8")
         self.runtime = RUNTIME.read_text(encoding="utf-8")
+        self.grid_runtime = GRID_RUNTIME.read_text(encoding="utf-8")
+        self.grid_css = GRID_CSS.read_text(encoding="utf-8")
+        self.published_grid_runtime = PUBLISHED_GRID_RUNTIME.read_text(
+            encoding="utf-8"
+        )
+        self.published_grid_css = PUBLISHED_GRID_CSS.read_text(encoding="utf-8")
+        self.grid_schema = GRID_SCHEMA.read_text(encoding="utf-8")
         self.archived_height_guide = ARCHIVED_HEIGHT_GUIDE.read_text(
             encoding="utf-8"
         )
@@ -67,6 +83,20 @@ class InfographicOverlayContractTests(unittest.TestCase):
             "microsim-generator/references/overlay-iframe-height-pinning.md",
             opening,
         )
+
+    def test_grid_zones_use_native_button_semantics(self):
+        self.assertIn("document.createElement('button')", self.grid_runtime)
+        self.assertIn("el.type           = 'button'", self.grid_runtime)
+        self.assertIn(
+            "el.setAttribute('aria-label', zone.label)", self.grid_runtime
+        )
+        self.assertIn(".grid-zone:focus-visible", self.grid_css)
+        self.assertIn("native button", self.grid_schema)
+        self.assertIn("Space in both Explore and Quiz modes", self.grid_schema)
+
+    def test_published_grid_runtime_matches_the_generator_assets(self):
+        self.assertEqual(self.grid_runtime, self.published_grid_runtime)
+        self.assertEqual(self.grid_css, self.published_grid_css)
 
 
 if __name__ == "__main__":
