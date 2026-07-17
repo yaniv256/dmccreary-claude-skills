@@ -23,6 +23,9 @@ DEFAULT_MODEL_ID = "eleven_multilingual_v2"
 PHONEME_MODEL_ID = "eleven_flash_v2"
 DEFAULT_OUTPUT_FORMAT = "mp3_44100_128"
 MP3_CONTENT_TYPES = {"audio/mpeg", "audio/mp3"}
+REQUEST_TIMEOUT_SECONDS = 60
+MAX_AUDIO_BYTES = 16 * 1024 * 1024
+MAX_ERROR_BYTES = 64 * 1024
 
 
 def slugify(term: str) -> str:
@@ -85,6 +88,63 @@ def _stage_bytes(destination: Path, data: bytes) -> Path:
         temporary_path.unlink(missing_ok=True)
         raise
     return temporary_path
+
+
+def _publish_artifact_pair(
+    audio_path: Path,
+    audio_stage: Path,
+    provenance_path: Path,
+    provenance_stage: Path,
+) -> None:
+    """Publish audio and provenance together, restoring the old pair on error."""
+    publications = (
+        (audio_path, audio_stage),
+        (provenance_path, provenance_stage),
+    )
+    backups: dict[Path, Path] = {}
+    try:
+        for destination, _ in publications:
+            if destination.exists():
+                if not destination.is_file():
+                    raise IsADirectoryError(f"Artifact destination is not a file: {destination}")
+                backups[destination] = _stage_bytes(
+                    destination, destination.read_bytes()
+                )
+    except BaseException:
+        for backup in backups.values():
+            backup.unlink(missing_ok=True)
+        raise
+
+    retain_backups = False
+    try:
+        for destination, staged in publications:
+            os.replace(staged, destination)
+    except BaseException as publication_error:
+        rollback_errors = []
+        for destination, _ in reversed(publications):
+            try:
+                backup = backups.get(destination)
+                if backup is not None:
+                    os.replace(backup, destination)
+                else:
+                    destination.unlink(missing_ok=True)
+            except OSError as rollback_error:
+                rollback_errors.append(f"{destination}: {rollback_error}")
+        if rollback_errors:
+            retain_backups = True
+            retained = ", ".join(
+                str(path) for path in backups.values() if path.exists()
+            ) or "none"
+            raise RuntimeError(
+                "Artifact publication failed and rollback could not be verified; "
+                f"retained backups: {retained}; rollback errors: "
+                + "; ".join(rollback_errors)
+            ) from publication_error
+        raise
+    finally:
+        if not retain_backups:
+            for backup in backups.values():
+                backup.unlink(missing_ok=True)
 
 
 def _request_fingerprint(request_contract: dict) -> str:
@@ -183,15 +243,19 @@ def generate_pronunciation(
     )
 
     try:
-        with urllib.request.urlopen(request) as response:
-            audio = response.read()
+        with urllib.request.urlopen(
+            request, timeout=REQUEST_TIMEOUT_SECONDS
+        ) as response:
+            audio = response.read(MAX_AUDIO_BYTES + 1)
             content_type = (_header(response.headers, "Content-Type") or "").split(";", 1)[0].casefold()
             request_id = _header(response.headers, "request-id")
             trace_id = _header(response.headers, "x-trace-id")
     except urllib.error.HTTPError as error:
-        body = error.read().decode("utf-8", errors="replace")
+        body = error.read(MAX_ERROR_BYTES).decode("utf-8", errors="replace")
         raise RuntimeError(f"ElevenLabs HTTP {error.code}: {body}") from error
 
+    if len(audio) > MAX_AUDIO_BYTES:
+        raise ValueError(f"Response exceeds {MAX_AUDIO_BYTES} byte pronunciation limit")
     if content_type not in MP3_CONTENT_TYPES:
         raise ValueError(f"Expected audio/mpeg response, received {content_type or 'no Content-Type'}")
     if not _is_mp3(audio):
@@ -213,8 +277,12 @@ def generate_pronunciation(
         (json.dumps(provenance, indent=2, sort_keys=True) + "\n").encode("utf-8"),
     )
     try:
-        os.replace(audio_stage, resolved_output)
-        os.replace(provenance_stage, provenance_path)
+        _publish_artifact_pair(
+            resolved_output,
+            audio_stage,
+            provenance_path,
+            provenance_stage,
+        )
     finally:
         audio_stage.unlink(missing_ok=True)
         provenance_stage.unlink(missing_ok=True)

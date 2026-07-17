@@ -39,12 +39,12 @@ class FakeResponse:
     def __exit__(self, exc_type, exc, traceback):
         return False
 
-    def read(self):
-        return self.body
+    def read(self, size=-1):
+        return self.body if size < 0 else self.body[:size]
 
 
 class InterruptedResponse(FakeResponse):
-    def read(self):
+    def read(self, size=-1):
         raise OSError("connection interrupted")
 
 
@@ -103,6 +103,16 @@ class PronunciationGeneratorContractTests(unittest.TestCase):
                 )
             self.assertFalse(output.exists())
 
+    def test_oversized_success_body_is_not_published(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "pareto.mp3"
+            with mock.patch.object(self.module, "MAX_AUDIO_BYTES", 8):
+                with self.assertRaises(ValueError):
+                    self.generate_with(
+                        FakeResponse(b"ID3\x04\x00\x00oversized"), output
+                    )
+            self.assertFalse(output.exists())
+
     def test_interrupted_read_preserves_existing_artifact(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output = Path(temp_dir) / "pareto.mp3"
@@ -152,6 +162,10 @@ class PronunciationGeneratorContractTests(unittest.TestCase):
             self.assertIn("output_format=mp3_44100_128", request.full_url)
             self.assertEqual(payload["model_id"], "eleven_multilingual_v2")
             self.assertEqual(request.headers["Accept"], "audio/mpeg")
+            self.assertEqual(
+                urlopen.call_args.kwargs["timeout"],
+                self.module.REQUEST_TIMEOUT_SECONDS,
+            )
 
     def test_matching_artifact_is_reused_without_api_call(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -181,6 +195,38 @@ class PronunciationGeneratorContractTests(unittest.TestCase):
             self.generate_with(FakeResponse(b"ID3\x04\x00\x00audio"), output)
             leftovers = list(output.parent.glob(".*.tmp"))
             self.assertEqual(leftovers, [])
+
+    def test_provenance_replace_failure_restores_existing_pair(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output = Path(temp_dir) / "pareto.mp3"
+            provenance_path = Path(f"{output}.json")
+            output.write_bytes(b"existing-audio")
+            provenance_path.write_text('{"existing": true}\n', encoding="utf-8")
+            original_audio = output.read_bytes()
+            original_provenance = provenance_path.read_bytes()
+            real_replace = self.module.os.replace
+            replace_count = 0
+
+            def fail_second_replace(source, destination):
+                nonlocal replace_count
+                replace_count += 1
+                if replace_count == 2:
+                    raise OSError("provenance replacement failed")
+                return real_replace(source, destination)
+
+            with mock.patch.object(
+                self.module.os, "replace", side_effect=fail_second_replace
+            ):
+                with self.assertRaises(OSError):
+                    self.generate_with(
+                        FakeResponse(b"ID3\x04\x00\x00replacement"),
+                        output,
+                        force=True,
+                    )
+
+            self.assertEqual(output.read_bytes(), original_audio)
+            self.assertEqual(provenance_path.read_bytes(), original_provenance)
+            self.assertEqual(list(output.parent.glob(".*.tmp")), [])
 
 
 class PronunciationGuideContractTests(unittest.TestCase):

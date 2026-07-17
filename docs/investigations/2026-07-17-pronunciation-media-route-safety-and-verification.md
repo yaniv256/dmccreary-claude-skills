@@ -363,18 +363,139 @@ media workflows:
   fallback link, a live status region, and an external event controller with
   no inline JavaScript.
 
-Focused standard-library verification passes 14/14 tests. It covers basename
+Focused standard-library verification passes 16/16 tests. It covers basename
 output, path escape rejection, safe slugs, malformed successful responses,
-interrupted reads, provenance, request parameters, idempotent reuse, explicit
+oversized bodies, bounded network time, interrupted reads, paired-publication
+rollback, provenance, request parameters, idempotent reuse, explicit
 replacement, staging cleanup, current guide sources, and CSP/accessibility
-contracts.
+contracts. The complete media-generator Python suite passes 27/27 tests.
 
 The strict-CSP Playwright fixture passes 2/2 tests at 1280x900 and 390x844.
 Chromium loads the external controller without a page error, exposes native
 controls and the accessible name, reports play/pause/error state, and has no
 horizontal overflow.
 
+## Phase 9: Anti-Pattern Audit
+
+The class-wide audit searched the code graph first for sibling publication
+functions, callers, and tests, then used text search for markup and guidance
+variants that are not represented as executable graph edges. The current
+pronunciation fix remains intentionally scoped; each active sibling below is
+tracked as a separate investigation rather than being silently expanded into
+this patch.
+
+| Severity | Route | Evidence | Required follow-up |
+| --- | --- | --- | --- |
+| **High** | `skills/book-media-generator/scripts/story/generate-images.py` | Graph tracing shows `main()` calling `generate_one()`, which writes Gemini `inline.data` directly to the final path. `verify_dimensions()` runs only after publication, and a decode result of `None` does not fail the record, so invalid bytes can remain and be recorded as successful. No route test was found. | Add output confinement, validated decoding before publication, same-directory atomic replacement, provenance, idempotency, and destructive-failure regressions. |
+| **Medium** | `src/image-generation/generate-cover-openai.py` and `generate-logo-openai.py` | Graph tracing shows API bytes decoded through Pillow, then saved in place to caller-controlled final paths. Decoding validates the representation, but there is no approved root, atomic publication boundary, request provenance, or idempotency contract. | Harden the utilities or place them behind the repository's transactional media contract, with focused tests. |
+| **High** | `skills/microsim-generator/references/docker-python-lab-guide.md` and `assets/templates/timeline/index.md` | Text audit found active routed examples with inline event handlers. These repeat the strict-CSP failure class fixed in the pronunciation guide. | Replace inline handlers with external controllers and add strict-CSP, keyboard, status, and error-state browser tests. |
+| **Medium** | `skills/book-media-generator/references/story-guide.md` and `skills/microsim-utils/references/screen-capture.md` | Text audit found private `/Users/dan/...` paths in active operating guidance. The story guide also publishes mutable model, quota, and pricing claims as fixed prose. | Replace private paths with repository-relative or configurable locations and move mutable vendor facts behind primary-source discovery and dated verification. |
+
+Two nearby routes provide useful positive patterns. The Commons metadata
+client classifies 429 responses, bounds retries, clamps `Retry-After`, and
+validates contact configuration. The book installer already has pinned,
+transactional output behavior with executable tests. Those patterns should be
+reused rather than creating another media-specific retry or transaction
+framework.
+
+This audit changes the organizational conclusion but not the root-cause
+probability: the pronunciation incident is one instance of a broader absence
+of mandatory publication contracts across promoted media routes. The current
+fix establishes such a contract for pronunciation; the sibling investigations
+must apply the same boundary independently and prove it against their own
+media semantics.
+
 ## Remediation Plan
 
-Pending Phase 10. The Trello card's closure requirements remain authoritative
-until the comprehensive plan is written here and fully verified.
+### Phase 1: Stop the bleeding (today, less than one day)
+
+1. Ship the scoped pronunciation generator and guide changes already described
+   in Phase 8. Keep the old final artifact intact on every failed request, and
+   reject paths outside the caller-declared output root before network access.
+2. Run the focused 16-test generator contract, the complete 27-test
+   media-generator Python suite, the 2-viewport strict-CSP Playwright contract,
+   Python compilation, JavaScript syntax, and whitespace gates in CI.
+3. Generate one real MP3 with a currently discovered model and voice, inspect
+   its sidecar and hashes, and play it through the strict-CSP control before
+   calling the route released. If credentials are unavailable, keep this as an
+   explicit human-required release gate rather than substituting fixture bytes.
+4. Record the story-image, OpenAI cover/logo, and MicroSim CSP siblings as
+   separate investigations with exact source evidence. They are not closure
+   blockers for the scoped pronunciation patch, but they must not disappear
+   into prose-only follow-up.
+
+**Do not:** broaden the patch into unrelated media routes; accept an HTTP 200
+or `.mp3` suffix as audio validation; publish directly to the final path; put a
+credential in a test, guide, sidecar, shell history, or repository; or mark the
+incident resolved from mocked tests alone.
+
+### Phase 2: Structural hardening (this week, about three days)
+
+1. Make the pronunciation contract workflow a required repository check for
+   changes to the generator, guide, controller, fixture, or contract tests.
+2. Add a promotion checklist for every script-backed route moved from archived
+   material into an active skill. Require adversarial paths, interrupted input,
+   malformed successful input, preservation of an existing artifact,
+   provenance, idempotency, portability, current primary sources, and a browser
+   contract when the route emits UI.
+3. Complete the three sibling investigations. Fix each High finding with its
+   own media semantics and deterministic red/green reproduction before sharing
+   implementation code.
+4. Add a published-guidance scan that rejects private home-directory examples
+   and inline event handlers in active routes while allowing explicitly marked
+   historical incident evidence and test fixtures.
+5. Define a dated capability-verification record for mutable model, voice,
+   quota, and pricing claims. Operational guides should point to discovery
+   endpoints or primary documentation rather than copy an inventory into prose.
+
+**Do not:** use a giant repository-wide regex rewrite; treat all binary files
+as if they share MP3 validation; turn transient vendor inventory into a checked
+in allowlist; or make browser examples depend on `unsafe-inline` CSP.
+
+### Phase 3: Architectural hardening (next sprint, about one week)
+
+1. After the sibling investigations define their needs, extract the common
+   publication transaction: approved-root resolution, same-directory private
+   staging, format-specific validation hook, digest/provenance generation,
+   atomic replacement, idempotent reuse, and explicit replacement policy.
+2. Keep representation validators pluggable. MP3, PNG/JPEG, SVG, video, and
+   generated HTML require different structural and safety checks even when
+   they share publication mechanics.
+3. Make the active-skill release validator enumerate script-backed guide
+   routes and require a declared executable contract for each. A route without
+   a contract may remain archived but cannot be promoted as active guidance.
+4. Add a small, versioned provenance schema with request fingerprints and
+   non-secret debugging identifiers. Validate schema compatibility in tests so
+   later tools can inspect artifacts without parsing guide-specific JSON.
+5. Use one reusable strict-CSP, accessibility, and responsive browser harness
+   for generated controls, while preserving route-specific interaction tests.
+
+**Do not:** create a remote asset service, database, or job queue for local
+book generation without measured need; centralize vendor clients merely to
+share a few lines; or allow the shared transaction to bypass route-specific
+validation and user authorization.
+
+### Accepted debt
+
+- Network generation remains synchronous because this CLI creates one short
+  pronunciation asset at a time; a queue adds failure modes without current
+  throughput evidence.
+- MP3 validation uses declared media type plus MPEG/ID3 signature rather than
+  full audio decoding. Real generation and browser playback are the release
+  gate; a decoder dependency should be added only if malformed signed payloads
+  are observed.
+- Provenance records vendor request and trace IDs when returned but does not
+  require them, because intermediaries or vendor changes may omit those
+  headers. The request fingerprint and audio digest remain mandatory.
+- The archived pronunciation copy is not rewritten by this incident. Active
+  guidance is authoritative; archived material should be labeled historical
+  and audited separately if it can still be invoked by an installer.
+
+### Closure gates
+
+The incident is resolved only after the scoped change is reviewed, merged,
+and verified from the published repository; all automated tests pass; one real
+audio artifact is generated, provenance-checked, and played; the active guide
+and packaged skill are byte-consistent; sibling investigations are durably
+tracked; and the repository receives a CE Compound learning that links this
+investigation and its prevention contract.
