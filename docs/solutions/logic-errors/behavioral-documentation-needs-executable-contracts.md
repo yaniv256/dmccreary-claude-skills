@@ -13,7 +13,7 @@ symptoms:
 root_cause: missing_validation
 resolution_type: documentation_update
 severity: medium
-tags: [documentation-contract, skill, readme, behavioral-drift, regression-test]
+tags: [documentation-contract, skill, readme, behavioral-drift, regression-test, licensing]
 ---
 
 # Keep Behavioral Documentation Synchronized with Executable Contracts
@@ -78,6 +78,16 @@ upstream command and installer surfaces that define invocation ownership. The CI
 workflow watches those authorities as well as the skill and public description;
 otherwise a correct test can silently stop running when the integration changes.
 
+Safety and license statements belong to this behavioral contract as well. The
+FAQ generator's operating skill intentionally prohibited anchor fragments after
+its README had already taught section-anchor links. A later license edit changed
+only the skill frontmatter, leaving the README on MIT while the repository
+declared CC BY-NC-SA 4.0. The focused FAQ suite now checks the current link rule,
+rejects fragment-bearing README examples, and requires both local surfaces to
+publish the repository license (`skills/faq-generator/tests/test_documentation_contract.py`).
+Its workflow also watches the root README because a test cannot protect an
+upstream authority that does not trigger the test (`.github/workflows/faq-generator-contract.yml`).
+
 ## Why This Works
 
 The test compares meaning-bearing invariants while still allowing each document
@@ -99,7 +109,7 @@ between independently written entry points.
   publish a competing contract through arguments and follow-up instructions even
   when it names the canonical skill correctly.
 - Define the small set of behavioral dimensions that must agree: version,
-  defaults, workflow, safety rules, and artifact ownership.
+  defaults, workflow, safety rules, license terms, and artifact ownership.
 - Test semantic sections independently so headings cannot bleed into adjacent
   Required/Recommended/Optional regions.
 - Preserve historical behavior only under clearly superseded version history,
@@ -110,6 +120,9 @@ between independently written entry points.
   rather than widening one module's remediation boundary silently.
 - Make workflow path filters cover every authority the test reads. A semantic
   test is not a release gate when changes to an asserted input do not trigger it.
+- Reject stale examples as well as stale imperatives. A current paragraph can
+  state the right rule while a copied code or link example continues teaching
+  the retired behavior.
 
 ## Related Issues
 
@@ -117,3 +130,4 @@ between independently written entry points.
 - [Source remediation PR #16](https://github.com/yaniv256/dmccreary-claude-skills/pull/16)
 - [Reference generator contract investigation](../../investigations/2026-07-16-reference-generator-contract-drift.md)
 - [Reference generator remediation PR #18](https://github.com/yaniv256/dmccreary-claude-skills/pull/18)
+- [FAQ generator anchor and license investigation](../../investigations/2026-07-17-faq-generator-anchor-license-contracts.md)

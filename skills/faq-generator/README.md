@@ -232,7 +232,7 @@ ensuring students learn foundational concepts before advanced ones.
 understood before "Recursion."
 
 **See:** [Learning Graph Concept](concepts/learning-graph.md),
-[Glossary](glossary.md#learning-graph)
+[Glossary](glossary.md)
 
 ...
 ```
@@ -333,7 +333,7 @@ Claude will reference this document when determining appropriate Bloom's levels 
 
 1. **Balance Bloom's levels** - Don't over-focus on Remember/Understand
 2. **Include examples** - 40%+ of answers should have concrete examples
-3. **Link to sources** - 60%+ of answers should reference original content
+3. **Link to sources** - Link to chapter files only; never use anchor fragments
 4. **Use clear phrasing** - Make questions searchable and specific
 5. **Avoid duplicates** - Check for similar questions across categories
 6. **Match audience level** - Adjust complexity to target audience
@@ -376,8 +376,8 @@ Claude will reference this document when determining appropriate Bloom's levels 
 
 **Solution:**
 - Add examples to abstract or complex concepts
-- Link answers to relevant chapter sections
-- Use specific section anchors, not just page links
+- Link answers to relevant chapter files
+- Never use anchor fragments; file-only links remain valid when section headings change
 - Ensure examples are from course domain
 
 ## Version History
@@ -390,7 +390,8 @@ Claude will reference this document when determining appropriate Bloom's levels 
 
 ## License
 
-MIT License - See LICENSE file for details
+Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
+(CC BY-NC-SA 4.0), consistent with the [repository license](../../README.md).
 
 ## Support
 

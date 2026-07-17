@@ -1,0 +1,29 @@
+name: FAQ generator contract
+
+on:
+  pull_request:
+    paths:
+      - "skills/faq-generator/**"
+      - "README.md"
+      - ".github/workflows/faq-generator-contract.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "skills/faq-generator/**"
+      - "README.md"
+      - ".github/workflows/faq-generator-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Validate published FAQ generator contract
+        run: python3 -m unittest discover -s skills/faq-generator/tests -p 'test_*.py' -v
