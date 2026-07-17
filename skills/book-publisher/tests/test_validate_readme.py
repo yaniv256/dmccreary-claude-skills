@@ -60,5 +60,41 @@ class MarkdownFenceFormattingTests(unittest.TestCase):
         )
 
 
+class RequiredSectionTests(unittest.TestCase):
+    def test_unrelated_license_prose_is_not_a_license_section(self):
+        markdown = (
+            "# Demo\n\n"
+            "## Overview\n\nFixture.\n\n"
+            "## Getting Started\n\nUse it.\n\n"
+            "## Acknowledgements\n\n"
+            "A dependency's license is documented upstream.\n\n"
+            "## Contact\n\nFixture owner.\n"
+        )
+
+        found_required, missing_required, found_recommended, _ = (
+            validate_readme.check_required_sections(markdown)
+        )
+
+        self.assertEqual(found_required, ["overview", "getting started", "contact"])
+        self.assertEqual(missing_required, [])
+        self.assertNotIn("license", found_recommended)
+
+    def test_license_heading_is_detected_structurally(self):
+        markdown = (
+            "# Demo\n\n"
+            "Overview\n--------\n\nFixture.\n\n"
+            "## Getting-Started\n\nUse it.\n\n"
+            "## License ##\n\nSee LICENSE.\n\n"
+            "## Contact\n\nFixture owner.\n"
+        )
+
+        found_required, missing_required, found_recommended, _ = (
+            validate_readme.check_required_sections(markdown)
+        )
+
+        self.assertEqual(found_required, ["overview", "getting started", "contact"])
+        self.assertEqual(missing_required, [])
+        self.assertIn("license", found_recommended)
+
 if __name__ == "__main__":
     unittest.main()

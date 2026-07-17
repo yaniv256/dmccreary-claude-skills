@@ -27,7 +27,6 @@ def check_required_sections(content: str) -> Tuple[List[str], List[str]]:
     required = [
         'overview',
         'getting started',
-        'license',
         'contact'
     ]
 
@@ -36,7 +35,8 @@ def check_required_sections(content: str) -> Tuple[List[str], List[str]]:
         'usage',
         'contributing',
         'acknowledgements',
-        'issues'
+        'issues',
+        'license'
     ]
 
     found_required = []
@@ -44,21 +44,46 @@ def check_required_sections(content: str) -> Tuple[List[str], List[str]]:
     missing_required = []
     missing_recommended = []
 
-    content_lower = content.lower()
+    section_headings = extract_section_headings(content)
 
     for section in required:
-        if section in content_lower or section.replace(' ', '-') in content_lower:
+        if section in section_headings:
             found_required.append(section)
         else:
             missing_required.append(section)
 
     for section in recommended:
-        if section in content_lower or section.replace(' ', '-') in content_lower:
+        if section in section_headings:
             found_recommended.append(section)
         else:
             missing_recommended.append(section)
 
     return (found_required, missing_required, found_recommended, missing_recommended)
+
+
+def normalize_section_heading(heading: str) -> str:
+    """Normalize a Markdown heading for exact section-name matching."""
+    heading = re.sub(r"\s+#+\s*$", "", heading.strip())
+    return re.sub(r"[-_\s]+", " ", heading).strip().lower()
+
+
+def extract_section_headings(content: str) -> set[str]:
+    """Extract ATX and Setext headings without matching ordinary prose."""
+    headings: set[str] = set()
+    lines = content.splitlines()
+
+    for index, line in enumerate(lines):
+        atx_match = re.match(r"^[ \t]{0,3}#{1,6}[ \t]+(.+?)\s*$", line)
+        if atx_match:
+            headings.add(normalize_section_heading(atx_match.group(1)))
+            continue
+
+        if index == 0 or not line.strip():
+            continue
+        if re.match(r"^[ \t]{0,3}(?:=+|-+)[ \t]*$", line):
+            headings.add(normalize_section_heading(lines[index - 1]))
+
+    return headings
 
 def extract_links(content: str) -> List[Tuple[str, str]]:
     """Extract all markdown links from content."""

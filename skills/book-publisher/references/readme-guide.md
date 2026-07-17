@@ -76,17 +76,21 @@ Create badges for all relevant technologies and platforms. Use shields.io format
 
 ### Step 3: Add License Badge
 
-Look for license information in:
+Treat a license badge as a permission claim, not decoration. Inspect root
+license evidence (`LICENSE*`, `LICENCE*`, `COPYING*`, `LICENSES/`) and explicit
+package or book metadata. A file under `docs/` may govern only documentation;
+preserve its stated scope. The `mkdocs.yml` `copyright` field is attribution
+display text and is not license evidence.
 
-1. `LICENSE` file in root
-2. `docs/license.md`
-3. `mkdocs.yml` (copyright field)
-
-**Default to Creative Commons BY-NC-SA 4.0 if not specified:**
-
-```markdown
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-```
+- If one unambiguous repository-wide license is evidenced, use the matching
+  badge and link to the exact source file.
+- If evidence is absent, omit the license badge and report “No license
+  detected.” Default copyright applies; never invent or select a license.
+- If evidence is conflicting, compound, file-scoped, or nonstandard, omit a
+  single-license badge and report the source paths and unresolved scope.
+- Use an owner-supplied license choice only when the owner explicitly
+  authorizes that choice for this repository. Generating a README must never
+  create, replace, or broaden license terms.
 
 **Other common licenses:**
 
@@ -345,26 +349,22 @@ When reporting issues, please include:
 
 ### Step 10: Add License Information
 
-Reinforce licensing terms and attribution requirements:
+Add this section only when the repository contains unambiguous license evidence
+or the owner explicitly authorized the exact terms for this repository. Link to
+the source of truth and preserve its scope. Do not infer terms from project
+type, author identity, another repository, a copyright notice, or this example.
+
+Example structure for already-grounded terms:
 
 ```markdown
 ## License
 
-This work is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
-
-**You are free to:**
-
-- Share — copy and redistribute the material
-- Adapt — remix, transform, and build upon the material
-
-**Under the following terms:**
-
-- **Attribution** — Give appropriate credit with a link to the original
-- **NonCommercial** — No commercial use without permission
-- **ShareAlike** — Distribute contributions under the same license
-
-See [LICENSE.md](docs/license.md) for full details.
+See [LICENSE](LICENSE) for the license terms that apply to this repository.
 ```
+
+When no license is detected, omit the badge and License section. Include the
+absence in the generation report rather than turning it into README prose that
+could be mistaken for a selected license.
 
 ### Step 11: Add Acknowledgements
 
@@ -493,7 +493,8 @@ Before finalizing the README:
 - [ ] Code blocks have proper syntax highlighting
 - [ ] Links are not broken
 - [ ] Table of contents matches sections (if auto-generated)
-- [ ] License information is clear
+- [ ] Any license claim is grounded in identified repository evidence or an
+      explicit owner-authorized selection
 - [ ] Contact information is current
 
 ### Step 15: Write README.md
@@ -508,7 +509,7 @@ Generate the final README.md file in the repository root with all sections in or
 6. Getting Started
 7. Repository Structure
 8. Reporting Issues
-9. License
+9. License (only when grounded as described in Step 3)
 10. Acknowledgements
 11. Contact
 12. Optional sections (Contributing, Citation, Changelog)
@@ -549,7 +550,8 @@ Output: JSON object with all metrics
 
 Validates README.md for:
 
-- Required sections present
+- Required sections present as Markdown headings
+- Optional License section included only when grounded in repository evidence
 - Working links
 - Valid badge URLs
 - Proper markdown formatting
