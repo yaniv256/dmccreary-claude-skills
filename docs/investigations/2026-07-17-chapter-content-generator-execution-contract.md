@@ -243,10 +243,84 @@ suites pass, `git diff --check` and Python compilation pass, the workflow YAML
 parses, and a CI-equivalent `mkdocs build --strict` succeeds in a temporary
 environment.
 
+## Anti-Pattern Audit
+
+The repository's indexed code graph was searched first for three structural
+shapes: parallel-default operating policy, sequential/parallel policy gates,
+and batch/Task-agent execution guidance. The graph reached the existing
+`quiz-generator` documentation contract as the closest same-class finding and
+the `reference-generator` contract as a second example of multiple published
+surfaces requiring one executable invariant. Those findings are already
+remediated and their tests pass. No additional active defect was found.
+
+| Finding | Graph evidence | Severity | Disposition |
+| --- | --- | --- | --- |
+| `quiz-generator` previously published parallel and serial defaults on separate surfaces. | Graph search reached `test_readme_rejects_the_superseded_parallel_default`, `test_both_surfaces_define_serial_execution_as_the_default`, and `test_skill_does_not_describe_parallel_generation_as_current_workflow`. | Low, already fixed | Existing five-test contract passes. |
+| `reference-generator` publishes a behavior across several integration authorities. | Graph search reached `test_current_surfaces_follow_canonical_serial_navigation` and related cross-surface contract methods. | Low, already guarded | Existing ten-test contract passes. |
+| Other Markdown surfaces might retain default-parallel variants. | Text fallback searched default-parallel, automatic-parallel, Task-agent, and batch-planning variants after the graph pass. | None found | No follow-up defect. |
+
+Subagent dispatch was intentionally omitted because this session did not have
+authorization to create subagents. The anti-pattern categories were instead
+queried independently through the code graph and merged here. Every repository
+Python contract suite passes after the search.
+
 ## Remediation Plan
 
-Pending Phase 10.
+### Phase 1: Stop the bleeding (today, complete locally)
+
+1. Make sequential generation the sole default across every active policy,
+   workflow, reporting, best-practice, pitfall, and example section.
+2. Retain parallel generation as an explicit-request option with a token-cost
+   warning; do not add an automatic chapter-count threshold.
+3. Update active examples to skill version 0.09.
+4. Prove the original failure and the fix with the focused contract test.
+
+### Phase 2: Structural hardening (this week, implementation complete)
+
+1. Run the contract in GitHub Actions whenever the skill or workflow changes.
+2. Keep the policy invariant behavioral: canonical default, request gate,
+   forbidden threshold, ordinary all-chapters example, and active version.
+3. Search the indexed repository for the same multiple-authority pattern and
+   confirm existing quiz/reference contracts remain green.
+4. Merge through a reviewed PR and independently rerun the focused contract on
+   the updated default branch.
+
+### Phase 3: Architectural prevention (next sprint, conditional)
+
+If another execution-policy drift incident appears, inventory every skill that
+publishes behavioral policy on more than one active surface and add focused
+contracts to those skills. Do not build a generalized documentation parser or
+central policy schema before recurrence demonstrates that the focused-test
+pattern is insufficient.
+
+### Accepted debt
+
+- Parallel execution remains documented in several places because each place
+  serves a distinct operational need: mode selection, batching, invocation,
+  reporting, and an explicit-request example. The CI contract guards their
+  shared precondition.
+- Historical logs and prompts are evidence, not active operating authorities;
+  they are not rewritten as part of this incident.
+
+### What not to do
+
+- Do not delete parallel mode; it remains a supported user-selected option.
+- Do not infer consent from chapter count, latency goals, or an "all chapters"
+  request.
+- Do not rely on `git blame` alone for moved documentation; inspect the patch.
+- Do not broaden this incident into unrelated prose cleanup or version-history
+  rewriting.
+- Do not mark the investigation closed before PR merge and default-branch proof.
 
 ## Closure Criteria
 
-Pending Phase 10.
+1. The source contains exactly one default execution policy: sequential for all
+   ordinary requests.
+2. Every parallel workflow is explicitly request-gated and includes the
+   token-cost warning.
+3. The five-test contract passes in CI and on the updated default branch.
+4. All repository Python suites and strict documentation build pass.
+5. The anti-pattern audit records no unguarded active sibling defect.
+6. The source PR is merged and its merge commit is recorded here.
+7. CE Compound records or reuses the durable learning before the Trello card is
+   moved to Done.
