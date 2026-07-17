@@ -46,7 +46,12 @@ def tree_snapshot(root: Path) -> tuple:
             entries.append((relative, "directory", stat.st_mode))
         else:
             entries.append(
-                (relative, "file", hashlib.sha256(path.read_bytes()).hexdigest(), stat.st_mode)
+                (
+                    relative,
+                    "file",
+                    hashlib.sha256(path.read_bytes()).hexdigest(),
+                    stat.st_mode,
+                )
             )
     return tuple(entries)
 
@@ -93,7 +98,9 @@ class InitTextbookTests(unittest.TestCase):
             before = tree_snapshot(project)
             config = init_textbook.build_config(arguments(project))
 
-            with self.assertRaisesRegex(init_textbook.ScaffoldError, "refusing to overwrite"):
+            with self.assertRaisesRegex(
+                init_textbook.ScaffoldError, "refusing to overwrite"
+            ):
                 init_textbook.scaffold(config)
 
             self.assertEqual(tree_snapshot(project), before)
@@ -130,7 +137,10 @@ class InitTextbookTests(unittest.TestCase):
 
             self.assertEqual(stage_parents, [None])
             self.assertFalse(
-                any(path.name.startswith(".init-textbook-") for path in project.iterdir())
+                any(
+                    path.name.startswith(".init-textbook-")
+                    for path in project.iterdir()
+                )
             )
 
     def test_write_failure_rolls_back_files_and_created_directories(self):
@@ -218,7 +228,9 @@ class InitTextbookTests(unittest.TestCase):
                     (project / "docs").symlink_to(outside, target_is_directory=True)
                 return real_open(path, flags, mode, dir_fd=dir_fd)
 
-            with mock.patch.object(init_textbook.os, "open", side_effect=swap_parent_before_leaf):
+            with mock.patch.object(
+                init_textbook.os, "open", side_effect=swap_parent_before_leaf
+            ):
                 with self.assertRaisesRegex(
                     init_textbook.ScaffoldError, "directory became unsafe"
                 ):
@@ -248,6 +260,108 @@ class InitTextbookTests(unittest.TestCase):
             self.assertEqual(list((replacement / "project").iterdir()), [])
             self.assertEqual(list((root / "original-parent" / "project").iterdir()), [])
 
+    def test_stage_directory_rebinding_is_rejected_before_publication(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            config = init_textbook.build_config(arguments(project))
+            real_render_stage = init_textbook.render_stage
+            replacement_marker = "attacker-owned\n"
+
+            def replace_stage_entry(render_config, stage):
+                stage = Path(stage)
+                try:
+                    resolved_stage = Path(init_textbook.os.readlink(stage))
+                except OSError:
+                    resolved_stage = (
+                        Path(init_textbook.os.readlink(stage.parent)) / stage.name
+                    )
+                moved_stage = resolved_stage.with_name(f"{resolved_stage.name}-moved")
+                resolved_stage.rename(moved_stage)
+                resolved_stage.mkdir()
+                (resolved_stage / "marker.txt").write_text(
+                    replacement_marker, encoding="utf-8"
+                )
+                return real_render_stage(render_config, stage)
+
+            with mock.patch.object(
+                init_textbook,
+                "render_stage",
+                side_effect=replace_stage_entry,
+            ):
+                with self.assertRaisesRegex(
+                    init_textbook.ScaffoldError,
+                    "staging directory changed before publication",
+                ):
+                    init_textbook.scaffold(config)
+
+            self.assertFalse((project / "mkdocs.yml").exists())
+            self.assertEqual(
+                next(project.glob(".init-textbook-*/marker.txt")).read_text(
+                    encoding="utf-8"
+                ),
+                replacement_marker,
+            )
+
+    def test_output_parent_created_after_pinning_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            config = init_textbook.build_config(arguments(project))
+            destinations = init_textbook.preflight(config)
+            root_fd = init_textbook.open_project_directory(config)
+            directory_fds, directory_identities = init_textbook.pin_output_directories(
+                config,
+                root_fd,
+                destinations,
+            )
+
+            with tempfile.TemporaryDirectory() as stage_directory:
+                stage = Path(stage_directory)
+                relative_paths = init_textbook.render_stage(config, stage)
+                raced_parent = project / "docs"
+                raced_parent.mkdir()
+                marker = raced_parent / "marker.txt"
+                marker.write_text("attacker-owned\n", encoding="utf-8")
+
+                try:
+                    with self.assertRaisesRegex(
+                        init_textbook.ScaffoldError,
+                        "output directory appeared after pinning: docs",
+                    ):
+                        init_textbook.commit_stage(
+                            config,
+                            stage,
+                            relative_paths,
+                            root_fd,
+                            directory_fds,
+                            directory_identities,
+                        )
+                finally:
+                    for relative, fd in reversed(list(directory_fds.items())):
+                        if relative != Path("."):
+                            init_textbook.os.close(fd)
+                    init_textbook.os.close(root_fd)
+
+            self.assertEqual(marker.read_text(encoding="utf-8"), "attacker-owned\n")
+            self.assertEqual(
+                sorted(path.name for path in project.iterdir()),
+                ["docs"],
+            )
+
+    def test_inserted_placeholder_text_is_not_substituted_again(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            config = init_textbook.build_config(
+                arguments(project, site_name="{{SITE_AUTHOR}}")
+            )
+
+            with self.assertRaisesRegex(
+                init_textbook.ScaffoldError,
+                "unresolved placeholders",
+            ):
+                init_textbook.scaffold(config)
+
+            self.assertEqual(list(project.iterdir()), [])
+
     def test_rollback_reports_cleanup_failures_and_preserves_primary_error(self):
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory)
@@ -271,10 +385,13 @@ class InitTextbookTests(unittest.TestCase):
                     raise OSError("rollback unlink failure")
                 return real_unlink(path, dir_fd=dir_fd)
 
-            with mock.patch.object(
-                init_textbook.shutil, "copyfileobj", side_effect=fail_second_copy
-            ), mock.patch.object(
-                init_textbook.os, "unlink", side_effect=fail_first_unlink
+            with (
+                mock.patch.object(
+                    init_textbook.shutil, "copyfileobj", side_effect=fail_second_copy
+                ),
+                mock.patch.object(
+                    init_textbook.os, "unlink", side_effect=fail_first_unlink
+                ),
             ):
                 with self.assertRaisesRegex(
                     init_textbook.ScaffoldError,

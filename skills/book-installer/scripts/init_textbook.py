@@ -9,6 +9,7 @@ import os
 import re
 import secrets
 import shutil
+import stat
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -171,9 +172,18 @@ def render_yaml_scalars(text: str, values: dict[str, str]) -> str:
         match = re.match(r"^(\s*[^#\n][^:\n]*:\s*)'(.*)'(\s*(?:#.*)?)(\r?\n)?$", line)
         if match:
             prefix, scalar, suffix, newline = match.groups()
-            for key, value in values.items():
-                scalar = scalar.replace(f"{{{{{key}}}}}", value.replace("'", "''"))
+            scalar = TOKEN_PATTERN.sub(
+                lambda token: values.get(token.group(1), token.group(0)).replace(
+                    "'", "''"
+                ),
+                scalar,
+            )
             line = f"{prefix}'{scalar}'{suffix}{newline or ''}"
+        else:
+            line = TOKEN_PATTERN.sub(
+                lambda token: values.get(token.group(1), token.group(0)),
+                line,
+            )
         rendered_lines.append(line)
     return "".join(rendered_lines)
 
@@ -186,21 +196,24 @@ def render_text(
     markdown_frontmatter: bool = False,
 ) -> str:
     if yaml:
-        text = render_yaml_scalars(text, values)
+        return render_yaml_scalars(text, values)
     elif markdown_frontmatter and text.startswith("---"):
         match = re.match(r"\A(---\r?\n)(.*?)(\r?\n---(?:\r?\n|\Z))", text, re.DOTALL)
         if match:
-            text = (
+            return (
                 match.group(1)
                 + render_yaml_scalars(match.group(2), values)
                 + match.group(3)
-                + text[match.end() :]
+                + TOKEN_PATTERN.sub(
+                    lambda token: values.get(token.group(1), token.group(0)),
+                    text[match.end() :],
+                )
             )
 
-    # The same tokens can also appear as ordinary Markdown or Python text.
-    for key, value in values.items():
-        text = text.replace(f"{{{{{key}}}}}", value)
-    return text
+    return TOKEN_PATTERN.sub(
+        lambda token: values.get(token.group(1), token.group(0)),
+        text,
+    )
 
 
 def planned_destinations(config: ScaffoldConfig) -> list[Path]:
@@ -227,7 +240,9 @@ def preflight(config: ScaffoldConfig) -> list[Path]:
     if collisions or unsafe_parents:
         paths = sorted({*collisions, *unsafe_parents})
         rendered = "\n".join(f"  - {path}" for path in paths)
-        raise ScaffoldError(f"refusing to overwrite or traverse existing output paths:\n{rendered}")
+        raise ScaffoldError(
+            f"refusing to overwrite or traverse existing output paths:\n{rendered}"
+        )
     return destinations
 
 
@@ -348,20 +363,95 @@ def pin_output_directories(
         raise
 
 
-def create_stage_directory(root_fd: int) -> tuple[str, Path]:
-    root_path = Path(f"/proc/self/fd/{root_fd}")
-    if not root_path.is_dir():
-        raise ScaffoldError(
-            "safe publication requires a descriptor-backed project path"
-        )
+def inode_identity(stat_result: os.stat_result) -> tuple[int, int]:
+    return (stat_result.st_dev, stat_result.st_ino)
+
+
+def create_stage_directory(
+    root_fd: int,
+) -> tuple[str, int, Path, tuple[int, int]]:
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
     for _ in range(32):
         name = f".init-textbook-{secrets.token_hex(8)}"
         try:
             os.mkdir(name, mode=0o700, dir_fd=root_fd)
         except FileExistsError:
             continue
-        return name, root_path / name
+        created = os.stat(name, dir_fd=root_fd, follow_symlinks=False)
+        try:
+            stage_fd = os.open(name, directory_flags, dir_fd=root_fd)
+        except OSError as error:
+            raise ScaffoldError("staging directory changed while opening") from error
+        stage_identity = inode_identity(os.fstat(stage_fd))
+        if stage_identity != inode_identity(created):
+            os.close(stage_fd)
+            raise ScaffoldError("staging directory changed while opening")
+        stage_path = Path(f"/proc/self/fd/{stage_fd}")
+        if not stage_path.is_dir():
+            os.close(stage_fd)
+            raise ScaffoldError(
+                "safe publication requires a descriptor-backed staging path"
+            )
+        return (
+            name,
+            stage_fd,
+            stage_path,
+            stage_identity,
+        )
     raise ScaffoldError("could not allocate a unique staging directory")
+
+
+def verify_stage_entry(
+    root_fd: int,
+    stage_name: str,
+    stage_identity: tuple[int, int],
+) -> None:
+    try:
+        current = os.stat(stage_name, dir_fd=root_fd, follow_symlinks=False)
+    except FileNotFoundError as error:
+        raise ScaffoldError("staging directory changed before publication") from error
+    if not stat.S_ISDIR(current.st_mode) or inode_identity(current) != stage_identity:
+        raise ScaffoldError("staging directory changed before publication")
+
+
+def clear_directory_fd(directory_fd: int) -> None:
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    for name in os.listdir(directory_fd):
+        current = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+        if stat.S_ISDIR(current.st_mode):
+            child_fd = os.open(name, directory_flags, dir_fd=directory_fd)
+            try:
+                if inode_identity(os.fstat(child_fd)) != inode_identity(current):
+                    raise ScaffoldError(
+                        f"staging directory entry changed during cleanup: {name}"
+                    )
+                clear_directory_fd(child_fd)
+            finally:
+                os.close(child_fd)
+            verified = os.stat(name, dir_fd=directory_fd, follow_symlinks=False)
+            if inode_identity(verified) != inode_identity(current):
+                raise ScaffoldError(
+                    f"staging directory entry changed during cleanup: {name}"
+                )
+            os.rmdir(name, dir_fd=directory_fd)
+        else:
+            os.unlink(name, dir_fd=directory_fd)
+
+
+def remove_stage_directory(
+    root_fd: int,
+    stage_fd: int,
+    stage_name: str,
+    stage_identity: tuple[int, int],
+) -> None:
+    clear_directory_fd(stage_fd)
+    try:
+        current = os.stat(stage_name, dir_fd=root_fd, follow_symlinks=False)
+    except FileNotFoundError as error:
+        raise ScaffoldError("staging directory changed before cleanup") from error
+    if not stat.S_ISDIR(current.st_mode) or inode_identity(current) != stage_identity:
+        raise ScaffoldError("staging directory changed before cleanup")
+    os.rmdir(stage_name, dir_fd=root_fd)
 
 
 def commit_stage(
@@ -373,11 +463,8 @@ def commit_stage(
     directory_identities: dict[Path, tuple[int, int]],
 ) -> None:
 
-    def identity(stat_result: os.stat_result) -> tuple[int, int]:
-        return (stat_result.st_dev, stat_result.st_ino)
-
     directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    root_identity = identity(os.fstat(root_fd))
+    root_identity = inode_identity(os.fstat(root_fd))
     written: list[tuple[int, str, tuple[int, int]]] = []
     created_directories: list[tuple[int, str, tuple[int, int]]] = []
 
@@ -389,7 +476,9 @@ def commit_stage(
         current_relative = Path(".")
         current_fd = root_fd
         for part in relative.parts:
-            next_relative = Path(part) if current_relative == Path(".") else current_relative / part
+            next_relative = (
+                Path(part) if current_relative == Path(".") else current_relative / part
+            )
             if next_relative in directory_fds:
                 current_relative = next_relative
                 current_fd = directory_fds[next_relative]
@@ -398,16 +487,14 @@ def commit_stage(
             created_identity: tuple[int, int] | None = None
             try:
                 os.mkdir(part, dir_fd=current_fd)
-            except FileExistsError:
-                pass
+            except FileExistsError as error:
+                raise ScaffoldError(
+                    f"output directory appeared after pinning: {next_relative}"
+                ) from error
             else:
-                created_stat = os.stat(
-                    part, dir_fd=current_fd, follow_symlinks=False
-                )
-                created_identity = identity(created_stat)
-                created_directories.append(
-                    (current_fd, part, created_identity)
-                )
+                created_stat = os.stat(part, dir_fd=current_fd, follow_symlinks=False)
+                created_identity = inode_identity(created_stat)
+                created_directories.append((current_fd, part, created_identity))
 
             try:
                 next_fd = os.open(part, directory_flags, dir_fd=current_fd)
@@ -415,7 +502,7 @@ def commit_stage(
                 raise ScaffoldError(
                     f"unsafe output directory appeared during write: {next_relative}"
                 ) from error
-            next_identity = identity(os.fstat(next_fd))
+            next_identity = inode_identity(os.fstat(next_fd))
             if created_identity is not None and next_identity != created_identity:
                 os.close(next_fd)
                 raise ScaffoldError(
@@ -432,7 +519,10 @@ def commit_stage(
             current_root = config.project_dir.lstat()
         except FileNotFoundError as error:
             raise ScaffoldError("project directory disappeared during write") from error
-        if config.project_dir.is_symlink() or identity(current_root) != root_identity:
+        if (
+            config.project_dir.is_symlink()
+            or inode_identity(current_root) != root_identity
+        ):
             raise ScaffoldError("project directory changed during write")
 
         for relative, expected in directory_identities.items():
@@ -442,11 +532,9 @@ def commit_stage(
             opened: list[int] = []
             try:
                 for part in relative.parts:
-                    current_fd = os.open(
-                        part, directory_flags, dir_fd=current_fd
-                    )
+                    current_fd = os.open(part, directory_flags, dir_fd=current_fd)
                     opened.append(current_fd)
-                if identity(os.fstat(current_fd)) != expected:
+                if inode_identity(os.fstat(current_fd)) != expected:
                     raise ScaffoldError(
                         f"output directory changed during write: {relative}"
                     )
@@ -460,14 +548,12 @@ def commit_stage(
 
         for parent_fd, name, expected in written:
             try:
-                current = os.stat(
-                    name, dir_fd=parent_fd, follow_symlinks=False
-                )
+                current = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
             except FileNotFoundError as error:
                 raise ScaffoldError(
                     f"output file disappeared during write: {name}"
                 ) from error
-            if identity(current) != expected:
+            if inode_identity(current) != expected:
                 raise ScaffoldError(f"output file changed during write: {name}")
 
     failure: Exception | None = None
@@ -483,7 +569,7 @@ def commit_stage(
                 dir_fd=parent_fd,
             )
             created = os.fstat(fd)
-            written.append((parent_fd, relative.name, identity(created)))
+            written.append((parent_fd, relative.name, inode_identity(created)))
             try:
                 output = os.fdopen(fd, "wb")
             except Exception:
@@ -498,30 +584,26 @@ def commit_stage(
         failure = error
         for parent_fd, name, expected in reversed(written):
             try:
-                current = os.stat(
-                    name, dir_fd=parent_fd, follow_symlinks=False
-                )
+                current = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
             except FileNotFoundError:
                 continue
             except OSError as cleanup_error:
                 rollback_errors.append(f"stat {name}: {cleanup_error}")
                 continue
-            if identity(current) == expected:
+            if inode_identity(current) == expected:
                 try:
                     os.unlink(name, dir_fd=parent_fd)
                 except OSError as cleanup_error:
                     rollback_errors.append(f"unlink {name}: {cleanup_error}")
         for parent_fd, name, expected in reversed(created_directories):
             try:
-                current = os.stat(
-                    name, dir_fd=parent_fd, follow_symlinks=False
-                )
+                current = os.stat(name, dir_fd=parent_fd, follow_symlinks=False)
             except FileNotFoundError:
                 continue
             except OSError as cleanup_error:
                 rollback_errors.append(f"stat directory {name}: {cleanup_error}")
                 continue
-            if identity(current) != expected:
+            if inode_identity(current) != expected:
                 continue
             try:
                 os.rmdir(name, dir_fd=parent_fd)
@@ -549,13 +631,16 @@ def scaffold(config: ScaffoldConfig, dry_run: bool = False) -> list[Path]:
         Path("."): config.project_identity
     }
     stage_name: str | None = None
+    stage_fd: int | None = None
+    stage_identity: tuple[int, int] | None = None
     failure: Exception | None = None
     try:
         directory_fds, directory_identities = pin_output_directories(
             config, root_fd, destinations
         )
-        stage_name, stage = create_stage_directory(root_fd)
+        stage_name, stage_fd, stage, stage_identity = create_stage_directory(root_fd)
         relative_paths = render_stage(config, stage)
+        verify_stage_entry(root_fd, stage_name, stage_identity)
         commit_stage(
             config,
             stage,
@@ -567,10 +652,19 @@ def scaffold(config: ScaffoldConfig, dry_run: bool = False) -> list[Path]:
     except Exception as error:
         failure = error
     finally:
-        if stage_name is not None:
+        if (
+            stage_name is not None
+            and stage_fd is not None
+            and stage_identity is not None
+        ):
             try:
-                shutil.rmtree(Path(f"/proc/self/fd/{root_fd}") / stage_name)
-            except OSError as cleanup_error:
+                remove_stage_directory(
+                    root_fd,
+                    stage_fd,
+                    stage_name,
+                    stage_identity,
+                )
+            except (OSError, ScaffoldError) as cleanup_error:
                 if failure is None:
                     failure = ScaffoldError(
                         f"could not remove staging directory: {cleanup_error}"
@@ -579,6 +673,7 @@ def scaffold(config: ScaffoldConfig, dry_run: bool = False) -> list[Path]:
                     failure = ScaffoldError(
                         f"{failure}; staging cleanup failure: {cleanup_error}"
                     )
+            os.close(stage_fd)
         for relative, fd in reversed(list(directory_fds.items())):
             if relative != Path("."):
                 os.close(fd)
