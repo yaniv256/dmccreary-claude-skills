@@ -103,6 +103,27 @@ the canonical chapter-label shape, and Step 12 ownership
 (`skills/book-installer/tests/test_supplementary_navigation_contract.py`). This
 is enforced after [PR #28](https://github.com/yaniv256/dmccreary-claude-skills/pull/28).
 
+The infographic-overlay investigation adds a provenance failure mode. During
+skill consolidation, a stale standalone reference was salvaged as apparently
+richer documentation without checking its claims against the template and
+runtime that became authoritative. It inverted the active top-level DOM order
+and described an infobox `style.minHeight` mechanism that the shipped
+`reportHeight()` never implemented. The remediation established the executable
+template and runtime history as the source of truth, rewrote the active
+reference around the actual worst-case body-height measurement, and marked the
+archived copy non-authoritative
+(`skills/microsim-generator/references/overlay-iframe-height-pinning.md`,
+`skills/archived/interactive-infographic-overlay/references/iframe-height-pinning.md`).
+
+That case also needed two kinds of coverage. A static contract rejects renewed
+disagreement among the template, runtime narrative, and active references
+(`skills/microsim-generator/tests/test_infographic_overlay_contract.py`). A
+Playwright fixture verifies the visible claim at desktop and mobile widths:
+switching between short and long callouts leaves the controls stationary and
+does not introduce inner overflow
+(`skills/microsim-generator/tests/test_infographic_overlay_browser.spec.js`).
+Both gates are enforced after [PR #32](https://github.com/yaniv256/dmccreary-claude-skills/pull/32).
+
 ## Why This Works
 
 The test compares meaning-bearing invariants while still allowing each document
@@ -144,6 +165,13 @@ between independently written entry points.
   rather than widening one module's remediation boundary silently.
 - Make workflow path filters cover every authority the test reads. A semantic
   test is not a release gate when changes to an asserted input do not trigger it.
+- Treat salvaged or consolidated references as untrusted until their behavioral
+  claims are checked against the active template, runtime, and relevant history.
+- Put a file-local non-authoritative warning on archived guidance that still
+  contains a contradictory historical contract; directory placement alone is
+  too easy to miss when a file is opened directly.
+- Pair semantic documentation checks with browser coverage when the protected
+  contract makes rendered layout or interaction claims.
 
 ## Related Issues
 
@@ -155,3 +183,5 @@ between independently written entry points.
 - [Chapter content remediation PR #26](https://github.com/yaniv256/dmccreary-claude-skills/pull/26)
 - [Supplementary navigation serialization investigation](../../investigations/2026-07-17-supplementary-content-navigation-serialization.md)
 - [Supplementary navigation remediation PR #28](https://github.com/yaniv256/dmccreary-claude-skills/pull/28)
+- [Infographic overlay DOM-order investigation](../../investigations/2026-07-16-infographic-overlay-dom-order.md)
+- [Infographic overlay remediation PR #32](https://github.com/yaniv256/dmccreary-claude-skills/pull/32)
