@@ -556,6 +556,10 @@ same contract:
   duplicate contract.
 - The active guide requires the inspector and validator before publication and
   states that neither tool may create or modify license files.
+- `.github/workflows/book-publisher-contract.yml` makes the focused contract
+  tests and entry-point compilation a path-scoped PR and `main` gate. Its path
+  set includes the active route, archived executable source, and historical
+  README prompt so recurrence sources cannot bypass the check.
 
 The pre-PR code review found and closed five additional boundary defects:
 
