@@ -76,17 +76,32 @@ Create badges for all relevant technologies and platforms. Use shields.io format
 
 ### Step 3: Add License Badge
 
-Look for license information in:
+Treat a license badge as a permission claim, not decoration. Inspect root
+license evidence (`LICENSE*`, `LICENCE*`, `COPYING*`, `LICENSES/`). A file
+under `docs/` may govern only documentation;
+preserve its stated scope. The `mkdocs.yml` `copyright` field is attribution
+display text and is not license evidence.
 
-1. `LICENSE` file in root
-2. `docs/license.md`
-3. `mkdocs.yml` (copyright field)
+Run the bundled inspector before drafting any license claim:
 
-**Default to Creative Commons BY-NC-SA 4.0 if not specified:**
-
-```markdown
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+```bash
+cd <book-publisher-skill-root>/scripts
+python3 license_authority.py /path/to/repository
 ```
+
+Use its `state`, evidence paths, and detected identifiers as the source record.
+`explicitly-authorized` is valid only when the repository owner supplied the
+exact value for this repository; pass that value with `--authorized-license`.
+
+- If one unambiguous repository-wide license is evidenced, use the matching
+  badge and link to the exact source file.
+- If evidence is absent, omit the license badge and report “No license
+  detected.” Default copyright applies; never invent or select a license.
+- If evidence is conflicting, compound, file-scoped, or nonstandard, omit a
+  single-license badge and report the source paths and unresolved scope.
+- Use an owner-supplied license choice only when the owner explicitly
+  authorizes that choice for this repository. Generating a README must never
+  create, replace, or broaden license terms.
 
 **Other common licenses:**
 
@@ -165,8 +180,9 @@ The `metrics` object provides: `concepts`, `chapters`, `microsims`, `stories`,
 `glossaryTerms`, `faqs`, `quizQuestions`, `chapterQuizzes`, `chapterReferences`,
 `references`, `diagrams`, `equations`, `words`, `links`, `appendices`,
 `mascotImages`, `developmentStage`, and `equivalentPages`. For **identity**
-fields (title, author, repo URL, license) read `book-metadata.json` /
-`mkdocs.yml`.
+fields (title, author, repo URL) read `book-metadata.json` / `mkdocs.yml`.
+For license state, use Step 3's authority inspector; metadata does not override
+repository evidence without explicit owner authorization.
 
 Only fall back to `scripts/collect-site-metrics.py` (markdown/image scanning)
 for counts the metrics file does not provide — e.g. image-asset counts or
@@ -345,26 +361,22 @@ When reporting issues, please include:
 
 ### Step 10: Add License Information
 
-Reinforce licensing terms and attribution requirements:
+Add this section only when the repository contains unambiguous license evidence
+or the owner explicitly authorized the exact terms for this repository. Link to
+the source of truth and preserve its scope. Do not infer terms from project
+type, author identity, another repository, a copyright notice, or this example.
+
+Example structure for already-grounded terms:
 
 ```markdown
 ## License
 
-This work is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
-
-**You are free to:**
-
-- Share — copy and redistribute the material
-- Adapt — remix, transform, and build upon the material
-
-**Under the following terms:**
-
-- **Attribution** — Give appropriate credit with a link to the original
-- **NonCommercial** — No commercial use without permission
-- **ShareAlike** — Distribute contributions under the same license
-
-See [LICENSE.md](docs/license.md) for full details.
+See [LICENSE](LICENSE) for the license terms that apply to this repository.
 ```
+
+When no license is detected, omit the badge and License section. Include the
+absence in the generation report rather than turning it into README prose that
+could be mistaken for a selected license.
 
 ### Step 11: Add Acknowledgements
 
@@ -479,7 +491,9 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 Before finalizing the README:
 
 1. **Check all links** - Verify GitHub URLs, site URLs, badge URLs
-2. **Validate markdown** - Ensure proper formatting
+2. **Validate markdown and license authority** - Run the bundled validator
+   against the target repository. A license-authority error is a hard failure,
+   not a score recommendation.
 3. **Test locally** - Render README on GitHub to check appearance
 4. **Spell check** - Review for typos and grammar
 5. **Consistency** - Ensure terminology matches project docs
@@ -493,7 +507,8 @@ Before finalizing the README:
 - [ ] Code blocks have proper syntax highlighting
 - [ ] Links are not broken
 - [ ] Table of contents matches sections (if auto-generated)
-- [ ] License information is clear
+- [ ] Any license claim is grounded in identified repository evidence or an
+      explicit owner-authorized selection
 - [ ] Contact information is current
 
 ### Step 15: Write README.md
@@ -508,7 +523,7 @@ Generate the final README.md file in the repository root with all sections in or
 6. Getting Started
 7. Repository Structure
 8. Reporting Issues
-9. License
+9. License (only when grounded as described in Step 3)
 10. Acknowledgements
 11. Contact
 12. Optional sections (Contributing, Citation, Changelog)
@@ -549,15 +564,22 @@ Output: JSON object with all metrics
 
 Validates README.md for:
 
-- Required sections present
+- Required sections present as Markdown headings
+- Optional License section included only when grounded in repository evidence
 - Working links
 - Valid badge URLs
 - Proper markdown formatting
 
 Usage:
 ```bash
-python validate-readme.py README.md
+cd <book-publisher-skill-root>/scripts
+python3 validate-readme.py /path/to/repository/README.md
 ```
+
+The validator derives the repository root from the README location. Use
+`--repo-root` only for a nonstandard layout. Use `--authorized-license` only
+when the repository owner explicitly authorized that exact value. Neither
+script creates or modifies license files.
 
 ## Output Files
 

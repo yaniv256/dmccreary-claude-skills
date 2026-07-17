@@ -1,0 +1,36 @@
+name: Book publisher contract
+
+on:
+  pull_request:
+    paths:
+      - "skills/book-publisher/**"
+      - "skills/archived/readme-generator/**"
+      - "docs/prompts/readme-generator-skill.md"
+      - ".github/workflows/book-publisher-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "skills/book-publisher/**"
+      - "skills/archived/readme-generator/**"
+      - "docs/prompts/readme-generator-skill.md"
+      - ".github/workflows/book-publisher-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  readme-publication:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Run book publisher contract tests
+        run: python -m unittest discover -s skills/book-publisher/tests -p 'test_*.py' -v
+      - name: Compile README authority entry points
+        run: |
+          python -m py_compile \
+            skills/book-publisher/scripts/license_authority.py \
+            skills/book-publisher/scripts/validate-readme.py \
+            skills/archived/readme-generator/scripts/validate-readme.py

@@ -80,17 +80,17 @@ Create badges for all relevant technologies and platforms. Use shields.io format
 
 ### Step 3: Add License Badge
 
-Look for license information in:
+Treat a license badge as a permission claim. Inspect root license files and
+explicit metadata, preserving any file or content scope. A docs page may have
+narrower scope, and the MkDocs copyright field is not license evidence.
 
-1. `LICENSE` file in root
-2. `docs/license.md`
-3. `mkdocs.yml` (copyright field)
-
-**Default to Creative Commons BY-NC-SA 4.0 if not specified:**
-
-```markdown
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
-```
+- If one unambiguous repository-wide license is evidenced, use its badge and
+  link to the exact source.
+- If evidence is absent, omit the badge and report “No license detected.”
+- If evidence is conflicting, compound, scoped, or nonstandard, omit a single
+  badge and report the source paths and unresolved scope.
+- Never invent a default license. Use an owner-supplied choice only when the
+  owner explicitly authorizes it for this repository.
 
 **Other common licenses:**
 
@@ -169,8 +169,9 @@ The `metrics` object provides: `concepts`, `chapters`, `microsims`, `stories`,
 `glossaryTerms`, `faqs`, `quizQuestions`, `chapterQuizzes`, `chapterReferences`,
 `references`, `diagrams`, `equations`, `words`, `links`, `appendices`,
 `mascotImages`, `developmentStage`, and `equivalentPages`. For **identity**
-fields (title, author, repo URL, license) read `book-metadata.json` /
-`mkdocs.yml`.
+fields (title, author, repo URL) read `book-metadata.json` / `mkdocs.yml`.
+License claims still require the evidence or explicit authorization described
+in Step 3.
 
 Only fall back to `scripts/collect-site-metrics.py` (markdown/image scanning)
 for counts the metrics file does not provide — e.g. image-asset counts or
@@ -349,26 +350,18 @@ When reporting issues, please include:
 
 ### Step 10: Add License Information
 
-Reinforce licensing terms and attribution requirements:
+Add this section only when repository evidence or an explicit owner-authorized
+selection establishes the exact terms. Preserve scope and link to the source
+of truth.
 
 ```markdown
 ## License
 
-This work is licensed under the [Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License](https://creativecommons.org/licenses/by-nc-sa/4.0/).
-
-**You are free to:**
-
-- Share — copy and redistribute the material
-- Adapt — remix, transform, and build upon the material
-
-**Under the following terms:**
-
-- **Attribution** — Give appropriate credit with a link to the original
-- **NonCommercial** — No commercial use without permission
-- **ShareAlike** — Distribute contributions under the same license
-
-See [LICENSE.md](docs/license.md) for full details.
+See [LICENSE](LICENSE) for the license terms that apply to this repository.
 ```
+
+If no license is detected, omit the badge and License section and report the
+absence outside the generated README.
 
 ### Step 11: Add Acknowledgements
 

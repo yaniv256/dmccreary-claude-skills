@@ -24,11 +24,12 @@ Examples:
 
 ## STEP 2: License Badge
 
-Look for a license file and put in the badge for the license.  By default we always will use the Creative Commons Attribution Noncommercial ShareAlike License. 
-
-Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0 DEED)
-
-[![License: CC BY-NC-SA 4.0](https://img.shields.io/badge/License-CC%20BY--NC--SA%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+Look for repository license evidence before adding a badge. Use a badge only
+for one unambiguous repository-wide license and link to the exact source file.
+Preserve file- or content-specific scope. If evidence is absent, conflicting,
+compound, or nonstandard, omit a single-license badge and report that state.
+Never infer a license from the project type, author, copyright display text,
+or another repository, and never invent a default license.
 
 ## STEP 3: Link to the Website
 
@@ -101,7 +102,9 @@ https://github.com/dmccreary/REPO_NAME/issues
 
 ## STEP 9: Review License
 
-Remind them that we always seek attribution for our work.
+Verify that every license statement is grounded in repository evidence or an
+explicit owner-authorized selection for this repository. If no license is
+detected, omit the License section and report the absence outside the README.
 
 ## STEP 10: Acknowledgements of Open Source Community
 
@@ -121,4 +124,3 @@ Please contact me on Please contact me on [LinkedIn](https://www.linkedin.com/in
 ## STEP 12: Misc
 
 Any miscellaneous information you think is relevent
-
