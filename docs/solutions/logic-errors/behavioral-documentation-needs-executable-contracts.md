@@ -1,6 +1,7 @@
 ---
 title: Keep Behavioral Documentation Synchronized with Executable Contracts
 date: 2026-07-16
+last_updated: 2026-07-17
 category: logic-errors
 module: quiz-generator
 problem_type: logic_error
@@ -78,6 +79,14 @@ upstream command and installer surfaces that define invocation ownership. The CI
 workflow watches those authorities as well as the skill and public description;
 otherwise a correct test can silently stop running when the integration changes.
 
+The chapter-content-generator incident extends the pattern to duplicated policy
+inside one operating file. Its top sections intentionally made sequential
+generation the default, while lower workflow, best-practice, reporting, and
+example sections retained an older automatic-parallel policy. A five-test
+contract failed against every stale surface before remediation and passes on
+the default branch after [PR #26](https://github.com/yaniv256/dmccreary-claude-skills/pull/26)
+(`skills/chapter-content-generator/tests/test_documentation_contract.py`).
+
 ## Why This Works
 
 The test compares meaning-bearing invariants while still allowing each document
@@ -106,6 +115,9 @@ between independently written entry points.
   never in current execution instructions.
 - Run the contract suite against the pre-migration source once; an expected
   failure is evidence that the test covers the defect.
+- Inspect the introducing patches for moved policy text. Ordinary `git blame`
+  can attribute a moved line to the reorganizing commit; use patch history or
+  move-aware blame before assigning migration provenance.
 - Search the repository for the retired policy and record separate defects
   rather than widening one module's remediation boundary silently.
 - Make workflow path filters cover every authority the test reads. A semantic
@@ -117,3 +129,5 @@ between independently written entry points.
 - [Source remediation PR #16](https://github.com/yaniv256/dmccreary-claude-skills/pull/16)
 - [Reference generator contract investigation](../../investigations/2026-07-16-reference-generator-contract-drift.md)
 - [Reference generator remediation PR #18](https://github.com/yaniv256/dmccreary-claude-skills/pull/18)
+- [Chapter content execution-policy investigation](../../investigations/2026-07-17-chapter-content-generator-execution-contract.md)
+- [Chapter content remediation PR #26](https://github.com/yaniv256/dmccreary-claude-skills/pull/26)

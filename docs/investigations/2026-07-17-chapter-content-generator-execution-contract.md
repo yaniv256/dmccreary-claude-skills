@@ -2,7 +2,7 @@
 
 ## Status
 
-MITIGATED LOCALLY - PENDING PR AND DEFAULT-BRANCH VERIFICATION
+RESOLVED
 
 ## Symptom
 
@@ -243,6 +243,10 @@ suites pass, `git diff --check` and Python compilation pass, the workflow YAML
 parses, and a CI-equivalent `mkdocs build --strict` succeeds in a temporary
 environment.
 
+The fix merged through [PR #26](https://github.com/yaniv256/dmccreary-claude-skills/pull/26)
+as default-branch commit `4332f9e9`. A fresh detached worktree at that exact
+`origin/main` commit reran the focused contract successfully (5/5).
+
 ## Anti-Pattern Audit
 
 The repository's indexed code graph was searched first for three structural
@@ -314,13 +318,13 @@ pattern is insufficient.
 
 ## Closure Criteria
 
-1. The source contains exactly one default execution policy: sequential for all
-   ordinary requests.
-2. Every parallel workflow is explicitly request-gated and includes the
-   token-cost warning.
-3. The five-test contract passes in CI and on the updated default branch.
-4. All repository Python suites and strict documentation build pass.
-5. The anti-pattern audit records no unguarded active sibling defect.
-6. The source PR is merged and its merge commit is recorded here.
-7. CE Compound records or reuses the durable learning before the Trello card is
-   moved to Done.
+- [x] The source contains exactly one default execution policy: sequential for
+  all ordinary requests.
+- [x] Every parallel workflow is explicitly request-gated and includes the
+  token-cost warning.
+- [x] The five-test contract passes in CI and on the updated default branch.
+- [x] All repository Python suites and strict documentation build pass.
+- [x] The anti-pattern audit records no unguarded active sibling defect.
+- [x] The source PR is merged and its merge commit is recorded here.
+- [x] CE Compound updates the existing durable learning before the Trello card
+  is moved to Done.
