@@ -75,6 +75,12 @@ body {
 
 /* ── Zone rectangles ─────────────────────────────────────────────────────── */
 .grid-zone {
+  appearance: none;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
   position: absolute;
   border: 2px solid transparent;
   cursor: pointer;
@@ -101,11 +107,19 @@ body {
 }
 
 /* Hover state — explore mode */
-.grid-zone.zone-hover {
+.grid-zone.zone-hover,
+.grid-zone:focus-visible {
   background: color-mix(in srgb, var(--zone-color, #1389A6) 15%, transparent);
   border-color: var(--zone-color, #1389A6);
 }
-.grid-zone.zone-hover .zone-chip { opacity: 1; }
+.grid-zone.zone-hover .zone-chip,
+.grid-zone:focus-visible .zone-chip { opacity: 1; }
+
+.grid-zone:focus-visible {
+  outline: 3px solid white;
+  outline-offset: -6px;
+  box-shadow: inset 0 0 0 6px var(--zone-color, #1389A6);
+}
 
 /* Active (clicked) state — explore mode */
 .grid-zone.zone-active {

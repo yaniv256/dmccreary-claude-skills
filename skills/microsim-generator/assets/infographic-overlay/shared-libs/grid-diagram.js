@@ -24,7 +24,7 @@ class GridDiagramSim {
     this.data        = null;
     this.mode        = 'explore';
     this.editMode    = false;
-    this.zoneEls     = new Map();   // id → zone <div>
+    this.zoneEls     = new Map();   // id → zone <button>
     this.activeId    = null;
 
     // Quiz state
@@ -32,6 +32,7 @@ class GridDiagramSim {
     this.quizIndex   = 0;
     this.quizCorrect = 0;
     this.quizLocked  = false;
+    this.lastAnsweredEl = null;
 
     // Edit state
     this.editTarget  = null;   // { zoneId, corner: 'tl'|'tr'|'bl'|'br' }
@@ -129,9 +130,11 @@ class GridDiagramSim {
     this.zoneEls.clear();
 
     for (const zone of (this.data.zones || [])) {
-      const el = document.createElement('div');
+      const el = document.createElement('button');
+      el.type           = 'button';
       el.className      = 'grid-zone';
       el.dataset.id     = zone.id;
+      el.setAttribute('aria-label', zone.label);
       el.style.left     = zone.x1 + '%';
       el.style.top      = zone.y1 + '%';
       el.style.width    = (zone.x2 - zone.x1) + '%';
@@ -195,7 +198,7 @@ class GridDiagramSim {
     }
 
     if (mode === 'explore') {
-      this._showPrompt('Click on any column to learn about it.');
+      this._showPrompt('Select any column to learn about it.');
       if (this.scoreEl) this.scoreEl.style.display = 'none';
     } else if (mode === 'quiz') {
       this._startQuiz();
@@ -216,7 +219,10 @@ class GridDiagramSim {
   }
 
   _onZoneClick(id) {
-    if (this.mode === 'explore') {
+    if (this.editMode) {
+      // Edit-mode interaction belongs to the corner handles, not the zone button.
+      return;
+    } else if (this.mode === 'explore') {
       this._showZoneDetail(id);
     } else if (this.mode === 'quiz') {
       this._checkQuizAnswer(id);
@@ -283,6 +289,7 @@ class GridDiagramSim {
     this.quizIndex   = 0;
     this.quizCorrect = 0;
     this.quizLocked  = false;
+    this.lastAnsweredEl = null;
 
     // Dim all zones — correct ones revealed as answered
     for (const el of this.zoneEls.values()) {
@@ -338,6 +345,7 @@ class GridDiagramSim {
       // Lock interaction and show the "Correct!" modal; its OK button
       // (→ _advanceQuiz) moves on to the next question.
       this.quizLocked = true;
+      this.lastAnsweredEl = el;
       this._showCorrectModal();
 
     } else {
@@ -370,6 +378,7 @@ class GridDiagramSim {
     this.quizLocked = false;
     this.quizIndex++;
     this._askQuestion();
+    if (this.lastAnsweredEl) this.lastAnsweredEl.focus();
   }
 
   _quizComplete() {
@@ -415,9 +424,11 @@ class GridDiagramSim {
       if (!el) continue;
 
       el.classList.add('edit-zone');
+      el.tabIndex = -1;
+      el.setAttribute('aria-disabled', 'true');
 
       for (const corner of ['tl', 'tr', 'bl', 'br']) {
-        const handle = document.createElement('div');
+        const handle = document.createElement('span');
         handle.className   = 'corner-handle corner-' + corner;
         handle.dataset.id  = zone.id;
         handle.dataset.corner = corner;
