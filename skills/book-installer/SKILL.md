@@ -2,7 +2,7 @@
 name: book-installer
 description: Installs and configures intelligent-textbook infrastructure - scaffold a brand-new MkDocs Material textbook (init textbook), install any of 40 features (math, mascot, learning graph viewer, Google Analytics GA4, custom 404, kanban board), and generate book metrics. Routes to the appropriate installation guide.
 model: sonnet
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 ---
 
 # Book Installer

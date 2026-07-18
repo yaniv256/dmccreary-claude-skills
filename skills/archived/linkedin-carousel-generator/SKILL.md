@@ -1,7 +1,7 @@
 ---
 name: linkedin-carousel-generator
 description: Generates a 13-slide LinkedIn carousel (a "document post" — PPTX/PDF) that showcases an intelligent textbook's key features, with real screenshots, mascot art, and metrics pulled from the project. Use when the user wants a LinkedIn slideshow/carousel/document post for a textbook, as opposed to linkedin-announcement-generator which produces post *text* only.
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 model: sonnet
 ---
 

@@ -2,7 +2,7 @@
 name: init-textbook
 description: Scaffolds a new intelligent textbook project from scratch — mkdocs.yml, docs/ directory tree, starter pages, and license files. Use at the very start of a new project, before chapters, learning graph, or MicroSims exist.
 model: sonnet
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 ---
 
 # init-textbook

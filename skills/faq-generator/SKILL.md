@@ -1,7 +1,7 @@
 ---
 name: faq-generator
 description: Generates a FAQ set for an intelligent textbook from course content, learning graph, and glossary terms. Use after the learning graph and glossary exist and at least 30% of chapters are written.
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 model: sonnet
 ---
 

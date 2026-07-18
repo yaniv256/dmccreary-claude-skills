@@ -18,7 +18,7 @@ You need to be in this directory when you clone a new github repository.
 
 When you create any new textbook, what License should you use?
 
-- **License**: Creative Commons Attribution-NonCommercial 4.0 (CC BY-NC 4.0)
+- **License**: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 (CC BY-NC-SA 4.0)
 
 ## Claude Skill Repo
 
@@ -54,4 +54,3 @@ Used for numeric or short text input
 ## P5.js Editor Support
 
 - for p5.js MicroSims, the deployed HTML uses the p5.js editor standard `<main></main>` (no id attribute). This allows teachers to copy and paste the JavaScript file directly into the p5.js editor without modification. In setup(), always parent the canvas with `canvas.parent(document.querySelector('main'));`.  Never add `id="main"` to the HTML `<main>` tag.
-

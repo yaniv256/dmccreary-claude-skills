@@ -2,7 +2,7 @@
 name: book-media-generator
 description: Generates media for intelligent textbooks - slide decks and presentations (MARP web decks in docs/slides/ or PowerPoint .pptx lecture downloads), illustrated stories and graphic novels, fact-checked infographic posters, freely-licensed chapter images from Wikimedia and government archives, and audio (text-to-speech voiceovers, glossary pronounce buttons via ElevenLabs). Routes to the appropriate media guide.
 model: sonnet
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 ---
 
 # Book Media Generator
