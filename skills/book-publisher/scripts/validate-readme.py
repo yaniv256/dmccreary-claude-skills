@@ -34,6 +34,36 @@ license_authority = importlib.util.module_from_spec(AUTHORITY_SPEC)
 assert AUTHORITY_SPEC.loader is not None
 AUTHORITY_SPEC.loader.exec_module(license_authority)
 
+METRICS_AUTHORITY_SCRIPT = Path(__file__).with_name("metrics_authority.py")
+METRICS_AUTHORITY_SPEC = importlib.util.spec_from_file_location(
+    "book_publisher_metrics_authority", METRICS_AUTHORITY_SCRIPT
+)
+metrics_authority = importlib.util.module_from_spec(METRICS_AUTHORITY_SPEC)
+assert METRICS_AUTHORITY_SPEC.loader is not None
+METRICS_AUTHORITY_SPEC.loader.exec_module(metrics_authority)
+
+README_METRIC_LABELS = {
+    "concepts in learning graph": "concepts",
+    "concepts": "concepts",
+    "chapters": "chapters",
+    "total words": "words",
+    "words": "words",
+    "microsims": "microsims",
+    "glossary terms": "glossaryTerms",
+    "faq questions": "faqs",
+    "faqs": "faqs",
+    "quiz questions": "quizQuestions",
+    "chapter quizzes": "chapterQuizzes",
+    "chapter references": "chapterReferences",
+    "references": "references",
+    "diagrams": "diagrams",
+    "equations": "equations",
+    "links": "links",
+    "appendices": "appendices",
+    "mascot images": "mascotImages",
+    "equivalent pages": "equivalentPages",
+}
+
 def check_required_sections(
     content: str,
 ) -> Tuple[List[str], List[str], List[str], List[str]]:
@@ -210,6 +240,95 @@ def extract_named_section(content: str, section_name: str) -> str:
     if start_index is None:
         return ""
     return "\n".join(lines[start_index:])
+
+
+def extract_readme_metric_claims(content: str) -> Dict[str, int]:
+    """Extract canonical numeric claims from the README metrics table."""
+    section = extract_named_section(content, "site status and metrics")
+    if not section:
+        return {}
+
+    claims: Dict[str, int] = {}
+    for line in section.splitlines():
+        match = re.match(r"^\s*\|\s*([^|]+?)\s*\|\s*([^|]+?)\s*\|\s*$", line)
+        if not match:
+            continue
+        label = normalize_section_heading(match.group(1))
+        field = README_METRIC_LABELS.get(label)
+        if not field:
+            continue
+        raw_value = match.group(2).strip().replace(",", "")
+        if not re.fullmatch(r"\d+", raw_value):
+            raise ValueError(
+                f"README metrics table value for {field} must be a non-negative "
+                "integer so it can be checked against canonical metrics"
+            )
+        value = int(raw_value)
+        if field in claims and claims[field] != value:
+            raise ValueError(
+                f"README metrics table claims two values for {field}: "
+                f"{claims[field]} and {value}"
+            )
+        claims[field] = value
+    return claims
+
+
+def check_metrics_authority(content: str, repo_root: Path) -> Dict[str, object]:
+    """Validate README metric claims against the canonical metrics file."""
+    try:
+        claims = extract_readme_metric_claims(content)
+    except ValueError as error:
+        return {
+            "valid": False,
+            "state": "conflicting-claims",
+            "checked_fields": 0,
+            "claims": {},
+            "issues": [str(error)],
+            "provenance": {},
+        }
+
+    if not claims:
+        return {
+            "valid": True,
+            "state": "not-applicable",
+            "checked_fields": 0,
+            "claims": {},
+            "issues": [],
+            "provenance": {},
+        }
+
+    authority = metrics_authority.inspect_repository(repo_root)
+    if not authority["valid"]:
+        return {
+            "valid": False,
+            "state": authority["state"],
+            "checked_fields": 0,
+            "claims": claims,
+            "issues": authority["issues"],
+            "newer_sources": authority.get("newer_sources", []),
+            "provenance": {},
+        }
+
+    issues = []
+    for field, claimed_value in claims.items():
+        canonical_value = authority["metrics"][field]
+        if claimed_value != canonical_value:
+            issues.append(
+                f"README {field} claim {claimed_value:,} disagrees with "
+                f"canonical value {canonical_value:,}"
+            )
+
+    return {
+        "valid": not issues,
+        "state": "canonical" if not issues else "disagreement",
+        "checked_fields": len(claims),
+        "claims": claims,
+        "issues": issues,
+        "newer_sources": [],
+        "provenance": {
+            field: authority["provenance"][field] for field in claims
+        },
+    }
 
 
 def check_license_authority(
@@ -434,6 +553,8 @@ def validate_readme(
             'score': 0
         }
 
+    metrics_authority_report = check_metrics_authority(content, repository_root)
+
     report = {
         'valid': True,
         'file': str(path),
@@ -444,6 +565,7 @@ def validate_readme(
         'formatting': {},
         'headers': {},
         'license_authority': authority_report,
+        'metrics_authority': metrics_authority_report,
         'recommendations': [],
         'score': 0
     }
@@ -510,6 +632,10 @@ def validate_readme(
         report['valid'] = False
         report['recommendations'].extend(authority_report['issues'])
 
+    if metrics_authority_report['issues']:
+        report['valid'] = False
+        report['recommendations'].extend(metrics_authority_report['issues'])
+
     # Calculate score (0-100)
     score = 100
 
@@ -534,6 +660,9 @@ def validate_readme(
 
     # Authority violations are a hard failure as well as a visible score cost.
     if authority_report['issues']:
+        score -= 40
+
+    if metrics_authority_report['issues']:
         score -= 40
 
     report['score'] = max(0, score)
@@ -630,6 +759,16 @@ def format_report(report: Dict) -> str:
     )
     output.append(f"Issues found: {len(authority['issues'])}")
     for issue in authority['issues']:
+        output.append(f"  - {issue}")
+
+    metrics = report['metrics_authority']
+    output.append("\n" + "-" * 60)
+    output.append("METRICS AUTHORITY")
+    output.append("-" * 60)
+    output.append(f"Evidence state: {metrics['state']}")
+    output.append(f"Canonical fields checked: {metrics['checked_fields']}")
+    output.append(f"Issues found: {len(metrics['issues'])}")
+    for issue in metrics['issues']:
         output.append(f"  - {issue}")
 
     # Recommendations

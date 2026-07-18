@@ -70,7 +70,8 @@ Read the corresponding guide file from `references/` and follow its workflow.
 - `references/badges.md` — shields.io badge catalog for the README
 - `references/carousel-slide-patterns.md` — nine reusable pptxgenjs slide patterns
 - `references/carousel-content-sourcing.md` — which project field feeds which carousel slide
-- `scripts/collect-site-metrics.py` — fallback scanner for counts the metrics hub does not provide (image assets, code blocks)
+- `scripts/metrics_authority.py` — validates canonical schema, freshness, mirror consistency, and field provenance
+- `scripts/collect-site-metrics.py` — canonical authority report plus supplemental Markdown, image-asset, and code-block counts
 - `scripts/license_authority.py` — fail-closed repository license-evidence inspector
 - `scripts/validate-readme.py` — README structure and license-authority validator
 - `scripts/crop-screenshot.py` — crop screenshots to carousel aspect ratio
@@ -80,7 +81,7 @@ Read the corresponding guide file from `references/` and follow its workflow.
 ### Example 1: README
 **User:** "Update the README for this book"
 **Routing:** Keyword "README" → `references/readme-guide.md`
-**Action:** Refresh book-metrics.json, read readme-guide.md, generate README.md with badges and metrics table
+**Action:** Refresh and validate book-metrics.json, read readme-guide.md, generate README.md with badges and a provenance-checked metrics table
 
 ### Example 2: LinkedIn Post
 **User:** "Write a LinkedIn announcement — we just published chapter 12"
