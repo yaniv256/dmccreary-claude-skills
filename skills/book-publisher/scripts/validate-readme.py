@@ -4,7 +4,8 @@ README Validation Script
 
 Validates README.md files for:
 - Required sections present
-- Working links (basic check)
+- Repository-local link targets and Markdown anchors
+- External link syntax (reachability remains a separate check)
 - Valid badge URLs
 - Proper markdown formatting
 - Common issues
@@ -17,13 +18,15 @@ Output:
 """
 
 import argparse
+import html
 import importlib.util
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
-from urllib.parse import urlparse
+from typing import Dict, List, Optional, Set, Tuple
+from urllib.parse import unquote, urlparse, urlsplit
 
 
 AUTHORITY_SCRIPT = Path(__file__).with_name("license_authority.py")
@@ -111,29 +114,531 @@ def normalize_section_heading(heading: str) -> str:
     return re.sub(r"[-_\s]+", " ", heading).strip().lower()
 
 
-def extract_section_headings(content: str) -> set[str]:
-    """Extract ATX and Setext headings without matching ordinary prose."""
-    headings: set[str] = set()
+def markdown_visible_lines(content: str) -> List[str]:
+    """Mask fenced, indented-code, and HTML-comment content line-for-line."""
     lines = content.splitlines()
+    visible: List[str] = []
+    open_fence_character: Optional[str] = None
+    open_fence_length = 0
+    in_html_comment = False
 
-    for index, line in enumerate(lines):
-        atx_match = re.match(r"^[ \t]{0,3}#{1,6}[ \t]+(.+?)\s*$", line)
+    for line in lines:
+        fence_match = re.match(r"^[ \t]{0,3}(`{3,}|~{3,})([^\r\n]*)$", line)
+        if open_fence_character is not None:
+            if fence_match:
+                marker, info_string = fence_match.groups()
+                if (
+                    marker[0] == open_fence_character
+                    and len(marker) >= open_fence_length
+                    and not info_string.strip()
+                ):
+                    open_fence_character = None
+                    open_fence_length = 0
+            visible.append("")
+            continue
+
+        if fence_match:
+            marker, info_string = fence_match.groups()
+            if not (marker[0] == "`" and "`" in info_string):
+                open_fence_character = marker[0]
+                open_fence_length = len(marker)
+                visible.append("")
+                continue
+
+        cleaned: List[str] = []
+        cursor = 0
+        while cursor < len(line):
+            if in_html_comment:
+                end = line.find("-->", cursor)
+                if end < 0:
+                    cursor = len(line)
+                    break
+                in_html_comment = False
+                cursor = end + 3
+                continue
+            start = line.find("<!--", cursor)
+            if start < 0:
+                cleaned.append(line[cursor:])
+                break
+            cleaned.append(line[cursor:start])
+            in_html_comment = True
+            cursor = start + 4
+
+        cleaned_line = "".join(cleaned)
+        if re.match(r"^(?: {4}|\t)", cleaned_line):
+            visible.append("")
+        else:
+            visible.append(cleaned_line)
+
+    return visible
+
+
+def extract_markdown_headings(content: str) -> List[Dict[str, object]]:
+    """Extract structural ATX and Setext headings from visible Markdown."""
+    lines = content.splitlines()
+    visible = markdown_visible_lines(content)
+    headings: List[Dict[str, object]] = []
+
+    for index, line in enumerate(visible):
+        atx_match = re.match(r"^[ \t]{0,3}(#{1,6})[ \t]+(.+?)\s*$", line)
         if atx_match:
-            headings.add(normalize_section_heading(atx_match.group(1)))
+            headings.append(
+                {
+                    "text": re.sub(r"\s+#+\s*$", "", atx_match.group(2)).strip(),
+                    "level": len(atx_match.group(1)),
+                    "line_index": index,
+                    "body_start": index + 1,
+                }
+            )
             continue
 
         if index == 0 or not line.strip():
             continue
-        if re.match(r"^[ \t]{0,3}(?:=+|-+)[ \t]*$", line):
-            headings.add(normalize_section_heading(lines[index - 1]))
+        setext_match = re.match(r"^[ \t]{0,3}(=+|-+)[ \t]*$", line)
+        if setext_match and visible[index - 1].strip():
+            headings.append(
+                {
+                    "text": lines[index - 1].strip(),
+                    "level": 1 if setext_match.group(1).startswith("=") else 2,
+                    "line_index": index - 1,
+                    "body_start": index + 1,
+                }
+            )
 
     return headings
 
+
+def extract_section_headings(content: str) -> Set[str]:
+    """Extract normalized section names from structural Markdown headings."""
+    return {
+        normalize_section_heading(str(heading["text"]))
+        for heading in extract_markdown_headings(content)
+    }
+
+
+def _heading_rendered_text(value: str) -> str:
+    """Remove Markdown link destinations while preserving rendered labels."""
+    output: List[str] = []
+    bracket_pairs = _bracket_pairs(value)
+    index = 0
+    while index < len(value):
+        is_image = value.startswith("![", index)
+        opening = index + 1 if is_image else index
+        if value[opening : opening + 1] != "[":
+            output.append(value[index])
+            index += 1
+            continue
+
+        closing = bracket_pairs.get(opening)
+        if closing is None:
+            output.append(value[index])
+            index += 1
+            continue
+
+        label = value[opening + 1 : closing]
+        cursor = closing + 1
+        end = cursor
+        if cursor < len(value) and value[cursor] == "(":
+            _, parsed_end, _ = _parse_inline_destination(value, cursor)
+            if parsed_end is not None:
+                end = parsed_end + 1
+        elif cursor < len(value) and value[cursor] == "[":
+            reference_end = bracket_pairs.get(cursor)
+            if reference_end is not None:
+                end = reference_end + 1
+
+        output.append(_heading_rendered_text(label))
+        index = max(end, closing + 1)
+    return "".join(output)
+
+
+def github_heading_slug(heading: str) -> str:
+    """Generate the base GitHub-style anchor slug for a Markdown heading."""
+    value = html.unescape(heading).strip().lower()
+    value = re.sub(r"<[^>]+>", "", value)
+    value = _heading_rendered_text(value)
+    value = value.replace("`", "").replace("*", "").replace("~", "")
+    kept = []
+    for character in value:
+        category = unicodedata.category(character)
+        if character in {"-", "_"} or character.isspace():
+            kept.append(character)
+        elif not category.startswith(("P", "S", "C")):
+            kept.append(character)
+    return re.sub(r"\s", "-", "".join(kept))
+
+
+def extract_heading_anchors(content: str) -> Set[str]:
+    """Return GitHub-style heading anchors, including duplicate suffixes."""
+    counts: Dict[str, int] = {}
+    anchors: Set[str] = set()
+    for heading in extract_markdown_headings(content):
+        base = github_heading_slug(str(heading["text"]))
+        occurrence = counts.get(base, 0)
+        counts[base] = occurrence + 1
+        anchors.add(base if occurrence == 0 else f"{base}-{occurrence}")
+    return anchors
+
+
+def _mask_inline_code(line: str) -> str:
+    """Blank matched backtick code spans while preserving character offsets."""
+    characters = list(line)
+    index = 0
+    while index < len(line):
+        if line[index] != "`":
+            index += 1
+            continue
+        run_end = index
+        while run_end < len(line) and line[run_end] == "`":
+            run_end += 1
+        marker = line[index:run_end]
+        closing = line.find(marker, run_end)
+        if closing < 0:
+            index = run_end
+            continue
+        for masked_index in range(index, closing + len(marker)):
+            characters[masked_index] = " "
+        index = closing + len(marker)
+    return "".join(characters)
+
+
+def _bracket_pairs(text: str) -> Dict[int, int]:
+    """Pair unescaped square brackets in one linear pass."""
+    stack: List[int] = []
+    pairs: Dict[int, int] = {}
+    index = 0
+    while index < len(text):
+        if text[index] == "\\":
+            index += 2
+            continue
+        if text[index] == "[":
+            stack.append(index)
+        elif text[index] == "]":
+            if stack:
+                opening = stack.pop()
+                pairs[opening] = index
+        index += 1
+    return pairs
+
+
+def _unescape_markdown_destination(destination: str) -> str:
+    return re.sub(r"\\([\\`*{}\[\]()#+.!_<>-])", r"\1", destination)
+
+
+def _parse_reference_destination(value: str) -> Optional[str]:
+    value = value.strip()
+    if not value:
+        return None
+    if value.startswith("<"):
+        closing = value.find(">", 1)
+        if closing < 0:
+            return None
+        return _unescape_markdown_destination(value[1:closing])
+
+    depth = 0
+    index = 0
+    while index < len(value):
+        character = value[index]
+        if character == "\\":
+            index += 2
+            continue
+        if character == "(":
+            depth += 1
+        elif character == ")":
+            if depth == 0:
+                break
+            depth -= 1
+        elif character.isspace() and depth == 0:
+            break
+        index += 1
+    if index == 0 or depth != 0:
+        return None
+    return _unescape_markdown_destination(value[:index])
+
+
+def _parse_inline_destination(
+    text: str,
+    opening_parenthesis: int,
+) -> Tuple[Optional[str], Optional[int], bool]:
+    index = opening_parenthesis + 1
+    while index < len(text) and text[index].isspace():
+        index += 1
+    if index >= len(text):
+        return None, None, True
+
+    if text[index] == "<":
+        closing_angle = text.find(">", index + 1)
+        if closing_angle < 0:
+            return text[index + 1 :], None, True
+        destination = text[index + 1 : closing_angle]
+        cursor = closing_angle + 1
+    else:
+        start = index
+        depth = 0
+        while index < len(text):
+            character = text[index]
+            if character == "\\":
+                index += 2
+                continue
+            if character == "(":
+                depth += 1
+            elif character == ")":
+                if depth == 0:
+                    return (
+                        _unescape_markdown_destination(text[start:index]),
+                        index,
+                        False,
+                    )
+                depth -= 1
+            elif character.isspace() and depth == 0:
+                break
+            index += 1
+        if index == start or depth != 0:
+            return text[start:index], None, True
+        destination = text[start:index]
+        cursor = index
+
+    remainder = text[cursor:]
+    closing = remainder.find(")")
+    if closing < 0:
+        return _unescape_markdown_destination(destination), None, True
+    between = remainder[:closing].strip()
+    if between and not (
+        (between.startswith('"') and between.endswith('"'))
+        or (between.startswith("'") and between.endswith("'"))
+        or (between.startswith("(") and between.endswith(")"))
+    ):
+        raw = text[opening_parenthesis + 1 : cursor + closing]
+        return _unescape_markdown_destination(raw.strip()), cursor + closing, True
+    return (
+        _unescape_markdown_destination(destination),
+        cursor + closing,
+        False,
+    )
+
+
+def _normalize_reference_label(label: str) -> str:
+    return re.sub(r"\s+", " ", label.strip()).casefold()
+
+
+def _extract_nested_image_entries(
+    label: str,
+    references: Dict[str, str],
+    line_number: int,
+) -> List[Dict[str, object]]:
+    """Extract images nested inside a link label, as used by badge markup."""
+    entries: List[Dict[str, object]] = []
+    bracket_pairs = _bracket_pairs(label)
+    index = 0
+    while index < len(label):
+        opening = label.find("![", index)
+        if opening < 0:
+            break
+        closing = bracket_pairs.get(opening + 1)
+        if closing is None:
+            break
+
+        alt_text = label[opening + 2 : closing]
+        cursor = closing + 1
+        destination: Optional[str] = None
+        malformed = False
+        end = cursor
+        if cursor < len(label) and label[cursor] == "(":
+            destination, parsed_end, malformed = _parse_inline_destination(
+                label,
+                cursor,
+            )
+            end = parsed_end + 1 if parsed_end is not None else len(label)
+        elif cursor < len(label) and label[cursor] == "[":
+            reference_end = bracket_pairs.get(cursor)
+            if reference_end is not None:
+                reference_label = label[cursor + 1 : reference_end] or alt_text
+                destination = references.get(
+                    _normalize_reference_label(reference_label)
+                )
+                end = reference_end + 1
+        else:
+            destination = references.get(_normalize_reference_label(alt_text))
+
+        if destination is not None:
+            entries.append(
+                {
+                    "text": alt_text,
+                    "destination": destination,
+                    "element": "image",
+                    "line": line_number,
+                    "malformed": malformed,
+                }
+            )
+        index = max(end, closing + 1)
+    return entries
+
+
+def _extract_multiline_inline_entries(
+    visible: List[str],
+    references: Dict[str, str],
+    definition_lines: Set[int],
+) -> List[Dict[str, object]]:
+    """Extract inline destinations whose Markdown syntax spans lines."""
+    lines = [
+        "" if line_number in definition_lines else _mask_inline_code(line)
+        for line_number, line in enumerate(visible, start=1)
+    ]
+    text = "\n".join(lines)
+    entries: List[Dict[str, object]] = []
+    bracket_pairs = _bracket_pairs(text)
+    index = 0
+    while index < len(text):
+        is_image = text.startswith("![", index)
+        opening = index + 1 if is_image else index
+        if text[opening : opening + 1] != "[":
+            index += 1
+            continue
+        closing = bracket_pairs.get(opening)
+        if closing is None or closing + 1 >= len(text) or text[closing + 1] != "(":
+            index += 1
+            continue
+
+        destination, parsed_end, malformed = _parse_inline_destination(
+            text,
+            closing + 1,
+        )
+        end = parsed_end + 1 if parsed_end is not None else len(text)
+        if destination is None or "\n" not in text[index:end]:
+            index = max(end, closing + 1)
+            continue
+
+        label = text[opening + 1 : closing]
+        line_number = text.count("\n", 0, index) + 1
+        if not is_image and "![" in label:
+            entries.extend(
+                _extract_nested_image_entries(label, references, line_number)
+            )
+        entries.append(
+            {
+                "text": label,
+                "destination": destination,
+                "element": "image" if is_image else "link",
+                "line": line_number,
+                "malformed": malformed,
+            }
+        )
+        index = max(end, closing + 1)
+    return entries
+
+
+def extract_markdown_link_entries(content: str) -> List[Dict[str, object]]:
+    """Extract inline, reference, image, and autolink destinations."""
+    visible = markdown_visible_lines(content)
+    references: Dict[str, str] = {}
+    definition_lines: Set[int] = set()
+    definition_pattern = re.compile(r"^[ \t]{0,3}\[([^\]]+)\]:[ \t]*(.*)$")
+
+    for line_number, line in enumerate(visible, start=1):
+        match = definition_pattern.match(line)
+        if not match:
+            continue
+        destination = _parse_reference_destination(match.group(2))
+        if destination is not None:
+            references.setdefault(
+                _normalize_reference_label(match.group(1)),
+                destination,
+            )
+            definition_lines.add(line_number)
+
+    entries: List[Dict[str, object]] = []
+    for line_number, visible_line in enumerate(visible, start=1):
+        if line_number in definition_lines:
+            continue
+        line = _mask_inline_code(visible_line)
+        bracket_pairs = _bracket_pairs(line)
+        occupied_spans: List[Tuple[int, int]] = []
+        index = 0
+        while index < len(line):
+            is_image = line.startswith("![", index)
+            opening = index + 1 if is_image else index
+            if line[opening : opening + 1] != "[":
+                index += 1
+                continue
+            closing = bracket_pairs.get(opening)
+            if closing is None:
+                index += 1
+                continue
+            label = line[opening + 1 : closing]
+            cursor = closing + 1
+            destination: Optional[str] = None
+            malformed = False
+            end = cursor
+
+            if cursor < len(line) and line[cursor] == "(":
+                destination, parsed_end, malformed = _parse_inline_destination(
+                    line,
+                    cursor,
+                )
+                end = parsed_end + 1 if parsed_end is not None else len(line)
+            elif cursor < len(line) and line[cursor] == "[":
+                reference_end = bracket_pairs.get(cursor)
+                if reference_end is not None:
+                    reference_label = line[cursor + 1 : reference_end] or label
+                    destination = references.get(
+                        _normalize_reference_label(reference_label)
+                    )
+                    end = reference_end + 1
+            else:
+                destination = references.get(_normalize_reference_label(label))
+
+            if destination is not None:
+                if not is_image and "![" in label:
+                    entries.extend(
+                        _extract_nested_image_entries(label, references, line_number)
+                    )
+                entries.append(
+                    {
+                        "text": label,
+                        "destination": destination,
+                        "element": "image" if is_image else "link",
+                        "line": line_number,
+                        "malformed": malformed,
+                    }
+                )
+                occupied_spans.append((index, max(end, closing + 1)))
+                index = max(end, closing + 1)
+            else:
+                index = closing + 1
+
+        autolink_pattern = re.compile(
+            r"<((?:https?://|mailto:)[^<>\s]+|"
+            r"[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@"
+            r"[A-Za-z0-9.-]+\.[A-Za-z]{2,})>"
+        )
+        for match in autolink_pattern.finditer(line):
+            if any(start <= match.start() < end for start, end in occupied_spans):
+                continue
+            destination = match.group(1)
+            if "@" in destination and not destination.startswith("mailto:"):
+                destination = f"mailto:{destination}"
+            entries.append(
+                {
+                    "text": match.group(1),
+                    "destination": destination,
+                    "element": "link",
+                    "line": line_number,
+                    "malformed": False,
+                }
+            )
+
+    entries.extend(
+        _extract_multiline_inline_entries(visible, references, definition_lines)
+    )
+    return entries
+
+
 def extract_links(content: str) -> List[Tuple[str, str]]:
-    """Extract all markdown links from content."""
-    # Match [text](url) format
-    links = re.findall(r'\[([^\]]+)\]\(([^\)]+)\)', content)
-    return links
+    """Compatibility wrapper returning Markdown link text and destinations."""
+    return [
+        (str(entry["text"]), str(entry["destination"]))
+        for entry in extract_markdown_link_entries(content)
+    ]
 
 def validate_url_format(url: str) -> bool:
     """Validate URL format (basic check)."""
@@ -148,6 +653,161 @@ def validate_url_format(url: str) -> bool:
         return bool(result.path or result.fragment or result.query)
     except ValueError:
         return False
+
+
+def _validate_link_destination(
+    destination: str,
+    readme_path: Path,
+    repo_root: Path,
+    malformed: bool = False,
+) -> Dict[str, object]:
+    candidate = html.unescape(destination.strip())
+    if malformed or not candidate or re.search(r"[\x00-\x1f\x7f]", candidate):
+        return {"valid": False, "kind": "invalid", "reason": "invalid-destination"}
+
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError:
+        return {"valid": False, "kind": "invalid", "reason": "invalid-destination"}
+
+    scheme = parsed.scheme.lower()
+    if scheme in {"http", "https"}:
+        try:
+            hostname = parsed.hostname
+            parsed.port
+        except ValueError:
+            return {"valid": False, "kind": "external", "reason": "invalid-host"}
+        if not parsed.netloc or not hostname:
+            return {"valid": False, "kind": "external", "reason": "missing-host"}
+        if re.search(r"\s", candidate):
+            return {"valid": False, "kind": "external", "reason": "invalid-destination"}
+        return {
+            "valid": True,
+            "kind": "external",
+            "reason": None,
+            "reachability_verified": False,
+        }
+    if scheme == "mailto":
+        address = parsed.path
+        if not address or "@" not in address or re.search(r"\s", address):
+            return {"valid": False, "kind": "mail", "reason": "invalid-destination"}
+        return {"valid": True, "kind": "mail", "reason": None}
+    if scheme:
+        return {"valid": False, "kind": "invalid", "reason": "unsupported-scheme"}
+    if parsed.netloc:
+        try:
+            hostname = parsed.hostname
+            parsed.port
+        except ValueError:
+            return {"valid": False, "kind": "external", "reason": "invalid-host"}
+        if not hostname:
+            return {"valid": False, "kind": "external", "reason": "missing-host"}
+        return {
+            "valid": True,
+            "kind": "external",
+            "reason": None,
+            "reachability_verified": False,
+        }
+
+    root = repo_root.resolve()
+    raw_path = unquote(parsed.path)
+    if "\\" in raw_path:
+        return {"valid": False, "kind": "local", "reason": "invalid-destination"}
+
+    if raw_path.startswith("/"):
+        return {
+            "valid": True,
+            "kind": "origin-relative",
+            "reason": None,
+            "reachability_verified": False,
+        }
+
+    if raw_path:
+        target = (readme_path.resolve().parent / raw_path).resolve()
+    else:
+        target = readme_path.resolve()
+
+    if not target.is_relative_to(root):
+        return {"valid": False, "kind": "local", "reason": "repository-escape"}
+    if not target.exists():
+        return {"valid": False, "kind": "local", "reason": "missing-local-target"}
+
+    fragment = unquote(parsed.fragment).strip()
+    if fragment and target.is_file() and target.suffix.lower() in {".md", ".markdown"}:
+        try:
+            target_content = target.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            return {
+                "valid": False,
+                "kind": "local",
+                "reason": "unreadable-local-target",
+                "target": target.relative_to(root).as_posix(),
+            }
+        anchors = extract_heading_anchors(target_content)
+        if fragment not in anchors:
+            return {
+                "valid": False,
+                "kind": "local",
+                "reason": "missing-markdown-anchor",
+                "target": target.relative_to(root).as_posix(),
+            }
+
+    return {
+        "valid": True,
+        "kind": "local",
+        "reason": None,
+        "target": target.relative_to(root).as_posix(),
+    }
+
+
+def check_links(content: str, readme_path: Path, repo_root: Path) -> Dict[str, object]:
+    """Validate Markdown destinations against syntax and local repository state."""
+    entries = extract_markdown_link_entries(content)
+    checked_entries: List[Dict[str, object]] = []
+    issues: List[Dict[str, object]] = []
+
+    for entry in entries:
+        result = _validate_link_destination(
+            str(entry["destination"]),
+            readme_path,
+            repo_root,
+            malformed=bool(entry.get("malformed")),
+        )
+        checked = {**entry, **result}
+        checked_entries.append(checked)
+        if not result["valid"]:
+            issues.append(
+                {
+                    "destination": entry["destination"],
+                    "line": entry["line"],
+                    "reason": result["reason"],
+                }
+            )
+
+    invalid = [str(issue["destination"]) for issue in issues]
+    return {
+        "total": len(checked_entries),
+        "entries": checked_entries,
+        "issues": issues,
+        "invalid": invalid,
+        "invalid_count": len(invalid),
+        "local_verified_count": sum(
+            1 for entry in checked_entries if entry["valid"] and entry["kind"] == "local"
+        ),
+        "external_unverified_count": sum(
+            1
+            for entry in checked_entries
+            if entry["valid"] and entry["kind"] == "external"
+        ),
+        "origin_relative_unverified_count": sum(
+            1
+            for entry in checked_entries
+            if entry["valid"] and entry["kind"] == "origin-relative"
+        ),
+        "mail_count": sum(
+            1 for entry in checked_entries if entry["valid"] and entry["kind"] == "mail"
+        ),
+    }
 
 def extract_badges(content: str) -> List[str]:
     """Extract badge URLs from content."""
@@ -210,36 +870,27 @@ def extract_claimed_license_ids(
 def extract_named_section(content: str, section_name: str) -> str:
     """Return one Markdown section body, stopping at its next peer heading."""
     lines = content.splitlines()
-    start_index: Optional[int] = None
-    section_level = 0
+    headings = extract_markdown_headings(content)
+    wanted = normalize_section_heading(section_name)
+    selected_index: Optional[int] = None
 
-    for index, line in enumerate(lines):
-        atx_match = re.match(r"^[ \t]{0,3}(#{1,6})[ \t]+(.+?)\s*$", line)
-        setext_match = index > 0 and bool(
-            re.match(r"^[ \t]{0,3}(?:=+|-+)[ \t]*$", line)
-        )
-        if atx_match:
-            level = len(atx_match.group(1))
-            heading = normalize_section_heading(atx_match.group(2))
-            content_start = index + 1
-        elif setext_match and lines[index - 1].strip():
-            level = 1 if line.lstrip().startswith("=") else 2
-            heading = normalize_section_heading(lines[index - 1])
-            content_start = index + 1
-        else:
-            continue
-        if start_index is None:
-            if heading == section_name:
-                start_index = content_start
-                section_level = level
-            continue
-        if level <= section_level:
-            boundary = index - 1 if setext_match else index
-            return "\n".join(lines[start_index:boundary])
+    for index, heading in enumerate(headings):
+        if normalize_section_heading(str(heading["text"])) == wanted:
+            selected_index = index
+            break
 
-    if start_index is None:
+    if selected_index is None:
         return ""
-    return "\n".join(lines[start_index:])
+
+    selected = headings[selected_index]
+    start = int(selected["body_start"])
+    level = int(selected["level"])
+    boundary = len(lines)
+    for heading in headings[selected_index + 1 :]:
+        if int(heading["level"]) <= level:
+            boundary = int(heading["line_index"])
+            break
+    return "\n".join(lines[start:boundary])
 
 
 def extract_readme_metric_claims(content: str) -> Dict[str, int]:
@@ -488,24 +1139,23 @@ def check_markdown_formatting(content: str) -> List[str]:
 def check_header_structure(content: str) -> List[str]:
     """Check header structure and hierarchy."""
     issues = []
-    lines = content.split('\n')
-
     h1_count = 0
     prev_level = 0
 
-    for i, line in enumerate(lines, start=1):
-        match = re.match(r'^(#+)\s+', line)
-        if match:
-            level = len(match.group(1))
+    for heading in extract_markdown_headings(content):
+        level = int(heading["level"])
+        line_number = int(heading["line_index"]) + 1
 
-            if level == 1:
-                h1_count += 1
+        if level == 1:
+            h1_count += 1
 
-            # Check for skipped levels
-            if prev_level > 0 and level > prev_level + 1:
-                issues.append(f"Line {i}: Skipped header level (#{prev_level} to #{level})")
+        if prev_level > 0 and level > prev_level + 1:
+            issues.append(
+                f"Line {line_number}: Skipped header level "
+                f"(#{prev_level} to #{level})"
+            )
 
-            prev_level = level
+        prev_level = level
 
     if h1_count == 0:
         issues.append("No H1 header found (should have repository name)")
@@ -579,14 +1229,10 @@ def validate_readme(
         'recommended_missing': missing_rec
     }
 
-    # Extract and validate links
-    links = extract_links(content)
-    invalid_links = [url for text, url in links if not validate_url_format(url)]
-    report['links'] = {
-        'total': len(links),
-        'invalid': invalid_links,
-        'invalid_count': len(invalid_links)
-    }
+    # Validate local files and anchors. External reachability is intentionally
+    # not claimed by this deterministic repository validator.
+    report['links'] = check_links(content, path.resolve(), repository_root)
+    invalid_links = report['links']['invalid']
 
     # Extract badges
     badges = extract_badges(content)
@@ -617,7 +1263,13 @@ def validate_readme(
         report['recommendations'].append(f"Consider adding recommended sections: {', '.join(missing_rec)}")
 
     if invalid_links:
-        report['recommendations'].append(f"Fix {len(invalid_links)} invalid link(s)")
+        report['valid'] = False
+        link_reasons = ", ".join(
+            sorted({str(issue['reason']) for issue in report['links']['issues']})
+        )
+        report['recommendations'].append(
+            f"Fix {len(invalid_links)} invalid link(s): {link_reasons}"
+        )
 
     if len(badges) == 0:
         report['recommendations'].append("Add badges for technologies used")
@@ -711,12 +1363,30 @@ def format_report(report: Dict) -> str:
     output.append("LINKS")
     output.append("-" * 60)
     output.append(f"Total links: {report['links']['total']}")
+    output.append(
+        f"Repository-local targets verified: "
+        f"{report['links']['local_verified_count']}"
+    )
+    output.append(
+        "External URLs syntax-valid, reachability not checked: "
+        f"{report['links']['external_unverified_count']}"
+    )
+    output.append(
+        "Origin-relative URLs unverified against their eventual host: "
+        f"{report['links']['origin_relative_unverified_count']}"
+    )
+    output.append(f"Mail links syntax-valid: {report['links']['mail_count']}")
     output.append(f"Invalid links: {report['links']['invalid_count']}")
-    if report['links']['invalid']:
-        for link in report['links']['invalid'][:5]:  # Show first 5
-            output.append(f"  - {link}")
-        if len(report['links']['invalid']) > 5:
-            output.append(f"  ... and {len(report['links']['invalid']) - 5} more")
+    if report['links']['issues']:
+        for issue in report['links']['issues'][:5]:
+            output.append(
+                f"  - line {issue['line']}: {issue['destination']} "
+                f"({issue['reason']})"
+            )
+        if len(report['links']['issues']) > 5:
+            output.append(
+                f"  ... and {len(report['links']['issues']) - 5} more"
+            )
 
     # Badges
     output.append("\n" + "-" * 60)
