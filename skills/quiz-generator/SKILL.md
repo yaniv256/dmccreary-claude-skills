@@ -1,7 +1,7 @@
 ---
 name: quiz-generator
 description: Generates multiple-choice quiz questions for each chapter, aligned to the learning graph and distributed across Bloom's Taxonomy levels. Use after chapter content and the learning graph both exist.
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 model: sonnet
 ---
 

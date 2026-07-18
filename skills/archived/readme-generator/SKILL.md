@@ -1,7 +1,7 @@
 ---
 name: readme-generator
 description: Creates or updates the GitHub README for a textbook project with badges, project overview, site metrics, and getting-started instructions.
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 model: sonnet
 ---
 

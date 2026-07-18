@@ -1,0 +1,38 @@
+name: Skill license contract
+
+on:
+  pull_request:
+    paths:
+      - "README.md"
+      - "docs/license.md"
+      - "docs/chapters/16-user-global-claude/index.md"
+      - "skills/**/SKILL.md"
+      - "skills/**/skill.md"
+      - "scripts/validate_skill_license_contract.py"
+      - "tests/test_skill_license_contract.py"
+      - ".github/workflows/skill-license-contract.yml"
+  push:
+    branches: [main]
+    paths:
+      - "README.md"
+      - "docs/license.md"
+      - "docs/chapters/16-user-global-claude/index.md"
+      - "skills/**/SKILL.md"
+      - "skills/**/skill.md"
+      - "scripts/validate_skill_license_contract.py"
+      - "tests/test_skill_license_contract.py"
+      - ".github/workflows/skill-license-contract.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Validate skill license metadata
+        run: python3 -m unittest tests/test_skill_license_contract.py -v

@@ -2,7 +2,7 @@
 name: marp-generator
 description: Generates slide decks in the MARP (Markdown Presentation Ecosystem) format and publishes them as live, embeddable presentations on an MkDocs Material site. Use this skill whenever the user wants to turn a topic, description, or existing chapter/document into a presentation, slide deck, or set of slides — trigger on phrases like "make a slide deck", "turn this chapter into a presentation", "create slides for X", "I need to present this", "build a deck about Y", or "add a presentation to the site", even if the user never says "MARP" by name. Produces a self-contained docs/slides/<deck-name>/ directory (MARP source, exported HTML, thumbnail, documentation page), adds the deck to the docs/slides/index.md gallery, and updates mkdocs.yml nav.
 model: sonnet
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC-SA 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 ---
 
 # MARP Generator

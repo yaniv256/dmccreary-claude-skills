@@ -1,7 +1,7 @@
 ---
 name: linkedin-announcement-generator
 description: Generates a LinkedIn post announcing an intelligent textbook milestone by pulling book metrics, chapter count, and key statistics. Use when announcing textbook completion or major content milestones on social media.
-license: Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)
+license: Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International (CC BY-NC-SA 4.0)
 model: sonnet
 ---
 
