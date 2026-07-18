@@ -173,9 +173,11 @@ fields (title, author, repo URL) read `book-metadata.json` / `mkdocs.yml`.
 License claims still require the evidence or explicit authorization described
 in Step 3.
 
-Only fall back to `scripts/collect-site-metrics.py` (markdown/image scanning)
-for counts the metrics file does not provide — e.g. image-asset counts or
-code-block counts. Never recount concepts/chapters/words by hand.
+`scripts/collect-site-metrics.py` validates that the canonical file is present,
+schema-complete, fresh relative to source content, and consistent with the
+metrics mirror in `book-metadata.json`. Its filesystem scan exposes only
+fields outside the canonical schema: Markdown-file, fenced code-block, and
+image-asset counts. Never recount or substitute canonical book totals.
 
 **Format as a table:**
 
@@ -525,14 +527,11 @@ The skill includes Python scripts for automated metrics collection:
 
 **`scripts/collect-site-metrics.py`**
 
-Scans the repository and generates a metrics report including:
-
-- Markdown file count and word counts
-- Chapter and section counts
-- MicroSim count
-- Glossary, FAQ, quiz statistics
-- Image and diagram counts
-- Learning graph statistics
+Loads and validates `docs/learning-graph/book-metrics.json`, the single source
+of truth for book-wide totals, and emits field-level provenance. Filesystem
+scanning is limited to supplemental Markdown-file, fenced code-block, and
+image-asset counts. The command fails closed for missing, malformed, stale, or
+inconsistent canonical data.
 
 Usage:
 ```bash
@@ -576,8 +575,9 @@ python validate-readme.py README.md
 1. Checks if README.md exists (found, create backup)
 2. Reads `mkdocs.yml` to extract site info
 3. Identifies technologies: MkDocs, Material, p5.js, Python
-4. Scans `/docs` for metrics (chapters, MicroSims, glossary)
-5. Runs `collect-site-metrics.py` to gather statistics
+4. Refreshes `docs/learning-graph/book-metrics.json` when needed
+5. Runs `collect-site-metrics.py` to validate canonical authority and gather
+   only supplemental Markdown/code/image observations
 6. Generates badges for all identified technologies
 7. Writes comprehensive README.md with all 12 sections
 8. Validates links and formatting

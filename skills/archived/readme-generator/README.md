@@ -48,21 +48,20 @@ The skill will:
 
 ### Metrics Collection Script
 
-`scripts/collect-site-metrics.py` - Gathers statistics about:
-
-- Markdown files and word counts
-- Chapters and sections
-- MicroSims and interactive elements
-- Glossary terms, FAQs, quizzes
-- Images and diagrams
-- Learning graph metrics
+`scripts/collect-site-metrics.py` loads and validates
+`docs/learning-graph/book-metrics.json`, the single source of truth for
+book-wide totals. It reports canonical values with field-level provenance and
+scans the filesystem only for supplemental Markdown-file, fenced code-block,
+and image-asset counts. Missing, malformed, stale, or inconsistent canonical
+data is a hard failure.
 
 **Usage:**
 ```bash
 python scripts/collect-site-metrics.py /path/to/repo
 ```
 
-**Output:** JSON object with all metrics
+**Output:** JSON object separating `canonical` metrics from `supplemental`
+filesystem observations
 
 ### Validation Script
 

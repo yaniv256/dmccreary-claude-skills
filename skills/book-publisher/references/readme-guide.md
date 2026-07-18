@@ -165,14 +165,22 @@ card all show identical numbers.
 bk-generate-book-metrics 2>/dev/null \
   || python3 "$BK_HOME/src/book-metrics/book-metrics.py" docs
 
-# 2. Read the totals:
+# 2. Resolve BOOK_PUBLISHER_HOME to the directory containing the loaded
+#    book-publisher SKILL.md, then validate authority and collect supplemental
+#    observations:
+python3 "$BOOK_PUBLISHER_HOME/scripts/collect-site-metrics.py" . \
+  > /tmp/readme-metrics.json
+
+# 3. Read canonical totals and their field-level provenance:
 python3 - <<'PY'
-import json, pathlib
-m = json.loads(pathlib.Path("docs/learning-graph/book-metrics.json").read_text())["metrics"]
-for k in ("concepts","chapters","microsims","glossaryTerms","faqs",
-          "quizQuestions","words","diagrams","references","equivalentPages",
-          "developmentStage"):
-    print(f"{k}: {m.get(k)}")
+import json
+report = json.load(open("/tmp/readme-metrics.json"))
+for key in ("concepts", "chapters", "microsims", "glossaryTerms", "faqs",
+            "quizQuestions", "words", "diagrams", "references",
+            "equivalentPages", "developmentStage"):
+    value = report["canonical"]["metrics"][key]
+    source = report["canonical"]["provenance"][key]
+    print(f"{key}: {value} ({source})")
 PY
 ```
 
@@ -184,9 +192,13 @@ fields (title, author, repo URL) read `book-metadata.json` / `mkdocs.yml`.
 For license state, use Step 3's authority inspector; metadata does not override
 repository evidence without explicit owner authorization.
 
-Only fall back to `scripts/collect-site-metrics.py` (markdown/image scanning)
-for counts the metrics file does not provide — e.g. image-asset counts or
-code-block counts. Never recount concepts/chapters/words by hand.
+`scripts/collect-site-metrics.py` validates that the canonical file is present,
+schema-complete, fresh relative to source content, and consistent with the
+metrics mirror in `book-metadata.json`. It fails closed otherwise. Its
+filesystem scan exposes only fields outside the canonical schema: Markdown
+file count, fenced code-block count, and image-asset counts. Never recount or
+substitute canonical fields such as concepts, chapters, words, MicroSims,
+equations, glossary terms, FAQs, quizzes, or references.
 
 **Format as a table:**
 
@@ -543,22 +555,22 @@ The skill includes Python scripts for automated metrics collection:
 
 **`scripts/collect-site-metrics.py`**
 
-Scans the repository and generates a metrics report including:
+Loads and validates `docs/learning-graph/book-metrics.json`, then emits:
 
-- Markdown file count and word counts
-- Chapter and section counts
-- MicroSim count
-- Glossary, FAQ, quiz statistics
-- Image and diagram counts
-- Learning graph statistics
+- canonical book totals with field-level JSON Pointer provenance
+- Markdown-file count as a supplemental filesystem observation
+- fenced code-block count as a supplemental filesystem observation
+- image-asset totals by file extension as supplemental observations
+
+It exits nonzero when canonical metrics are missing, malformed, stale, or
+inconsistent with the mirrored metrics in `book-metadata.json`.
 
 Usage:
 ```bash
-cd skills/book-publisher/scripts
-python collect-site-metrics.py /path/to/repo
+python3 "$BOOK_PUBLISHER_HOME/scripts/collect-site-metrics.py" /path/to/repo
 ```
 
-Output: JSON object with all metrics
+Output: JSON object with separate `canonical` and `supplemental` namespaces
 
 **`scripts/validate-readme.py`**
 
@@ -601,12 +613,14 @@ script creates or modifies license files.
 1. Checks if README.md exists (found, create backup)
 2. Reads `mkdocs.yml` to extract site info
 3. Identifies technologies: MkDocs, Material, p5.js, Python
-4. Scans `/docs` for metrics (chapters, MicroSims, glossary)
-5. Runs `collect-site-metrics.py` to gather statistics
+4. Refreshes `docs/learning-graph/book-metrics.json` when needed
+5. Runs `collect-site-metrics.py` to validate canonical authority and gather
+   only supplemental Markdown/code/image observations
 6. Generates badges for all identified technologies
 7. Writes comprehensive README.md with all 12 sections
 8. Validates links and formatting
-9. Reports: "Created README.md with 15 sections, 8 badges, and current site metrics (200 concepts, 13 chapters, 87 files, 12 MicroSims). Previous README backed up to README-backup.md."
+9. Reports the canonical JSON Pointer for every published book-wide total and
+   labels filesystem-only observations as supplemental
 
 ## Quality Standards
 

@@ -42,23 +42,29 @@ Describe who would use the website and why it is wonderful.
 
 ## STEP 5: Site Status and Metrics
 
-Provide a brief overview of the status of the textbook in terms of the components that have been added and what remains to be done.  Look in the docs/learning-graph for status and book metrics.  You can also find tools in the src/site-analytics that you can run to update the site metrics.
+Provide a brief overview of the status of the textbook in terms of the
+components that have been added and what remains to be done. The only authority
+for book-wide totals is `docs/learning-graph/book-metrics.json`, the single
+source of truth produced by `bk-generate-book-metrics`. Regenerate it when
+missing or stale, validate it, and cite its JSON fields. Never recount a
+canonical metric from Markdown. A filesystem scanner may add only observations
+that are absent from the canonical schema, such as Markdown-file, fenced
+code-block, and image-asset counts; label those values as supplemental.
 
 ### Sample book metrics include:
 
-1. Number of Concepts in the Concept Graph
-2. Number of Chapters
-3. Number of Markdown Files
-4. Total Number of Words (in all markdown files)
-5. Number of MicroSims (look in docs/sims)
-6. Number of Glossary Terms
-7. Number of FAQ questions
-8. Number of Quizzes
-9. Total Number of Quiz Questions
-10. Number of Equations
-11. Number of Markdown Lists, Tables
-12. Number of References
-13. Number of Images (png, jpg)
+1. Number of Concepts in the Concept Graph (canonical JSON)
+2. Number of Chapters (canonical JSON)
+3. Total Number of Words (canonical JSON)
+4. Number of MicroSims (canonical JSON)
+5. Number of Glossary Terms (canonical JSON)
+6. Number of FAQ questions (canonical JSON)
+7. Total Number of Quiz Questions (canonical JSON)
+8. Number of Equations (canonical JSON)
+9. Number of References (canonical JSON)
+10. Number of Markdown Files (supplemental filesystem observation)
+11. Number of fenced code blocks (supplemental filesystem observation)
+12. Number of image assets (supplemental filesystem observation)
 
 ### Book Specific Metrics
 

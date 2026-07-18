@@ -31,6 +31,10 @@ jobs:
       - name: Compile README authority entry points
         run: |
           python -m py_compile \
+            skills/book-publisher/scripts/metrics_authority.py \
+            skills/book-publisher/scripts/collect-site-metrics.py \
             skills/book-publisher/scripts/license_authority.py \
             skills/book-publisher/scripts/validate-readme.py \
+            skills/archived/readme-generator/scripts/metrics_authority.py \
+            skills/archived/readme-generator/scripts/collect-site-metrics.py \
             skills/archived/readme-generator/scripts/validate-readme.py
