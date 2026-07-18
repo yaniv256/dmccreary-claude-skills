@@ -502,7 +502,12 @@ See [CHANGELOG.md](CHANGELOG.md) for a detailed history of changes.
 
 Before finalizing the README:
 
-1. **Check all links** - Verify GitHub URLs, site URLs, badge URLs
+1. **Check links at the right evidence level** - Run the bundled validator to
+   verify repository-relative files and Markdown heading anchors. It checks the
+   syntax of external URLs, but does not claim they are reachable. A
+   leading-slash URL is origin-relative on GitHub, so it is also left
+   unverified rather than treated as a repository file. Run a separate
+   policy-aware live-link check before publication.
 2. **Validate markdown and license authority** - Run the bundled validator
    against the target repository. A license-authority error is a hard failure,
    not a score recommendation.
@@ -517,7 +522,8 @@ Before finalizing the README:
 - [ ] Live site URL works (if applicable)
 - [ ] Metrics are accurate and current
 - [ ] Code blocks have proper syntax highlighting
-- [ ] Links are not broken
+- [ ] Repository-local files and Markdown anchors pass the validator
+- [ ] External URLs pass a separate policy-aware reachability check
 - [ ] Table of contents matches sections (if auto-generated)
 - [ ] Any license claim is grounded in identified repository evidence or an
       explicit owner-authorized selection
@@ -578,7 +584,8 @@ Validates README.md for:
 
 - Required sections present as Markdown headings
 - Optional License section included only when grounded in repository evidence
-- Working links
+- Repository-local files and Markdown anchors verified against the checkout
+- External URL syntax reported separately from live reachability
 - Valid badge URLs
 - Proper markdown formatting
 
@@ -618,7 +625,8 @@ script creates or modifies license files.
    only supplemental Markdown/code/image observations
 6. Generates badges for all identified technologies
 7. Writes comprehensive README.md with all 12 sections
-8. Validates links and formatting
+8. Validates local link targets, Markdown anchors, and formatting; external
+   reachability is checked separately
 9. Reports the canonical JSON Pointer for every published book-wide total and
    labels filesystem-only observations as supplemental
 
@@ -631,7 +639,8 @@ A high-quality README should have:
 - Clear, compelling overview (200-400 words)
 - Complete getting started instructions
 - Proper attribution and licensing
-- Working links (100% functional)
+- Repository-local links verified against the checkout
+- External links independently checked for live reachability before publication
 - Professional formatting
 - Contact information
 
